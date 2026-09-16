@@ -1,15 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { getPopUpState, getRigidSceneRise } from '../src/iphone-duo/diorama/pop-up-motion.ts'
-
-test('continuous architectural clusters stay stored until the phone is nearly flat', () => {
-  assert.equal(getRigidSceneRise(.88), 0)
-  assert.equal(getRigidSceneRise(1), 1)
-  const middle = getRigidSceneRise(.95)
-  assert.ok(middle > 0 && middle < 1)
-  getRigidSceneRise(1)
-  assert.equal(getRigidSceneRise(.95), middle, 'rewind uses the same rise path')
-})
+import { getPopUpState } from '../src/iphone-duo/diorama/pop-up-motion.ts'
 
 test('closed scene is stored; open scene has all layers raised', () => {
   assert.deepEqual(getPopUpState(0), { terrain: 0, cabins: 0, lighthouse: 0 })

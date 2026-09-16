@@ -21,7 +21,7 @@ export function createMorphUniforms() {
 export function createCoverMorph({ material, photos, draw, element, onState, scene, coverMesh, warmup }) {
   const uniforms = material.uniforms, textures = new Map();
   const bounds = new Vector4(), point = new Vector3();
-  let gallery, disposed = false, loaded = false, position = 0, visible = false, previousState = '';
+  let gallery, disposed = false, loaded = false, prepared = false, position = 0, visible = false, retraction = 0, previousState = '';
   const report = state => { if (!disposed) onState(state); };
   const bind = (name, index) => {
     const texture = textures.get(index), crop = photos[index].crop;
@@ -37,7 +37,7 @@ export function createCoverMorph({ material, photos, draw, element, onState, sce
     // The original shader is driven by the reversible travel clock instead of
     // wall time, keeping the same image and warp when the user scrubs back.
     uniforms.uTime.value = frame.cursor * MORPH_SETTINGS.duration;
-    gallery.update(frame, visible, uniforms.uReduce.value > .5);
+    gallery.update(frame, visible, uniforms.uReduce.value > .5, retraction);
     if (element) {
       Object.assign(element.dataset, {
         photoCurrent: String(frame.current), photoTarget: String(frame.next), photoProgress: frame.transfer.toFixed(3),
@@ -46,12 +46,12 @@ export function createCoverMorph({ material, photos, draw, element, onState, sce
         photoGallery: 'react-bits-circular-gallery-three', photoGap: '20', photoCardScale: '2',
       });
     }
-    const state = { ready: true, index: frame.index, target: frame.next, busy: frame.busy, error: '' };
+    const state = { ready: true, prepared, index: frame.index, target: frame.next, busy: frame.busy, error: '' };
     const key = JSON.stringify(state);
     if (key !== previousState) { previousState = key; report(state); }
     draw();
   };
-  report({ ready: false, index: 0, target: 0, busy: false, error: '' });
+  report({ ready: false, prepared: false, index: 0, target: 0, busy: false, error: '' });
   const loader = new TextureLoader();
   Promise.all(photos.map(async (photo, index) => {
     const texture = await loader.loadAsync(photo.image);
@@ -66,9 +66,14 @@ export function createCoverMorph({ material, photos, draw, element, onState, sce
     uniforms.morphEnabled.value = 1;
     bind('Current', 0); bind('Next', 1);
     gallery = new CircularGallery({ scene, photos, textures, element });
-    await warmup();
-    if (disposed) return;
     loaded = true;
+    syncFrame();
+    // Browsing is ready as soon as its textures are ready. GPU preparation only
+    // gates unfolding, and must not disable the photograph's wheel/drag input.
+    try { await warmup(); }
+    catch (error) { if (!disposed) console.warn('Scene preparation deferred to first render.', error); }
+    if (disposed) return;
+    prepared = true;
     syncFrame();
   }).catch(() => report({ ready: false, index: 0, target: 0, busy: false, error: 'Some photographs could not load. Reload to try again.' }));
   return {
@@ -89,8 +94,9 @@ export function createCoverMorph({ material, photos, draw, element, onState, sce
       gallery.project(camera, bounds, far);
       element.dataset.coverBounds = [left, bottom, right, top].map(value => value.toFixed(5)).join(',');
     },
-    activity(nextVisible, nextReduced) {
+    activity(nextVisible, nextReduced, nextRetraction = 0) {
       visible = nextVisible;
+      retraction = nextRetraction;
       uniforms.uReduce.value = nextReduced ? 1 : 0;
       syncFrame();
     },

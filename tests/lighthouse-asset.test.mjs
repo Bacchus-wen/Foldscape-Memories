@@ -76,31 +76,36 @@ for (const sceneFile of ['lighthouse/lighthouse-memory-v2.glb', 'iceberg/iceberg
   data.materials = []; data.images = []; data.textures = []
   if (!globalThis.ProgressEvent) globalThis.ProgressEvent = class { constructor(type, values) { this.type = type; Object.assign(this, values) } }
   const gltf = await new GLTFLoader().parseAsync(JSON.stringify(data), '')
-  const asset = prepareLighthouseAsset(gltf.scene)
+  const asset = prepareLighthouseAsset(gltf.scene, sceneFile.split('/')[0])
   const { host, screen, fold } = await loadPhoneFixture()
   const anchors = createPageAnchors(screen, host)
   anchors.left.add(asset.left); anchors.right.add(asset.right)
   anchors.update()
-  const left = new Box3().setFromObject(asset.terrain[0])
-  const right = new Box3().setFromObject(asset.terrain[1])
-  if (asset.lighthouse[0].userData.rigidCluster) {
-    const bounds = new Box3().setFromObject(asset.lighthouse[0])
-    assert.ok(!bounds.isEmpty(), 'the intact architectural cluster has geometry')
-    assert.ok(Number.isFinite(bounds.max.z), 'the delivered cluster has finite bounds')
-  } else assert.ok(Math.abs(left.max.x - right.min.x) < .04, 'authored shore edges meet at the actual hinge')
-  if (sceneFile.startsWith('lighthouse')) assert.ok(asset.lighthouse[0].getObjectByName('LanternLightAnchor'), 'lamp has an authored mount')
-  if (sceneFile.startsWith('iceberg')) {
-    const vessel = new Box3().setFromObject(asset.lighthouse[0])
-    assert.ok(!vessel.isEmpty(), 'the vessel has actual geometry')
-    const vesselLocal = new Box3().setFromObject(asset.lighthouse[0].children[0])
-    assert.ok(Number.isFinite(vesselLocal.min.x), 'vessel geometry is finite')
-  }
-  const local = asset.lighthouse[0].position.clone()
-  for (const progress of [.2,.5,.85,1,.3,0]) {
-    fold(progress); anchors.update()
-    const expected = local.clone().applyMatrix4(anchors.right.matrixWorld)
-    const actual = asset.lighthouse[0].getWorldPosition(new Vector3())
-    assert.ok(actual.distanceTo(expected) < 1e-5, 'tower follows the right screen without recentering')
+  asset.animate(1)
+  host.updateMatrixWorld(true)
+  const left = new Box3().setFromObject(asset.left), right = new Box3().setFromObject(asset.right)
+  assert.ok(!left.isEmpty()&&!right.isEmpty(), 'the composition occupies both pages')
+  const localPages = [asset.left,asset.right].map((page,side)=>{
+    const meshes=[]
+    page.traverse(o=>{if(o instanceof Mesh)meshes.push(o)})
+    for(const mesh of meshes){
+      const box=mesh.geometry.boundingBox
+      assert.ok(side ? box.min.x>=-.532-1e-5 : box.max.x<=.532+1e-5, 'triangles end at the actual hinge')
+    }
+    return meshes
+  })
+  const combined=new Box3()
+  localPages.forEach((meshes,side)=>meshes.forEach(mesh=>{
+    const box=mesh.geometry.boundingBox.clone().translate(new Vector3(side?.5/.94:-.5/.94,0,0))
+    combined.union(box)
+  }))
+  assert.ok(combined.max.x-combined.min.x>1.4, `large composition spans the full display: ${combined.max.x-combined.min.x}`)
+  assert.ok(combined.max.x<=1.01&&combined.min.x>=-1.01, 'keeps the outer bezel clear')
+  assert.ok(combined.max.y<=.701&&combined.min.y>=-.701)
+  for(const p of [.15,.35,.55,.75,.96,1,.55,0]) {
+    fold(p);anchors.update();asset.animate(p);host.updateMatrixWorld(true)
+    assert.ok(asset.left.matrixWorld.elements.every(Number.isFinite))
+    assert.ok(asset.right.matrixWorld.elements.every(Number.isFinite))
   }
   asset.dispose(); anchors.dispose()
 })

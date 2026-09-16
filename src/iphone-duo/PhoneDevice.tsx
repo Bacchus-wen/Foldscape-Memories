@@ -6,6 +6,7 @@ import { loadPhone } from './model'
 import { createCoverMorph } from './cover-morph'
 import { MEMORY_PHOTOS } from './memory-photos'
 import { createFrameBudget, scenePixelRatio } from './frame-budget.js'
+import { frameSceneCamera } from './frame-camera.js'
 import { foldChoreography } from './fold-choreography'
 import { useFoldablePhone } from './FoldablePhone'
 import { createScreenContentTexture } from './cover-content'
@@ -16,7 +17,7 @@ type PhoneModel = Awaited<ReturnType<typeof loadPhone>>
 type Surface = { scene: Scene; model: PhoneModel; renderer: WebGLRenderer; camera: PerspectiveCamera; draw: () => void; warmup: () => Promise<void>; finish?: string; diorama?: ReturnType<typeof createLighthouse> }
 type DeviceRotation = { x: number; y: number; z: number }
 type DragState = { mode: 'fold'; x: number; value: number; moved: boolean } | { mode: 'rotate'; x: number; y: number; rotation: DeviceRotation; moved: boolean; lastX: number; lastY: number; lastTime: number; vx: number; vy: number }
-export type PhoneDeviceProps = ComponentProps<'div'> & { homeScale?: number; browsePhotos?: boolean; coverPhotoPosition?: number; coverPhotoActive?: boolean; onCoverPhotoState?: (state: { ready: boolean; index: number; target: number; busy: boolean; error: string }) => void; diorama?: boolean; memorySceneId?: string; onSceneReadyChange?: (ready: boolean) => void; sceneMotion?: boolean; interactionEpoch?: number; onReadyChange?: (ready: boolean) => void; modelSrc: string; screenSrc: string; videoSrc?: string; videoPlaying?: boolean; wallpaperMode?: string; screenOrientation?: number; screenLayoutVariant?: 'default' | 'seated'; foldEffects?: boolean; foldProjection?: boolean; innerFocusFlip?: boolean; coverSrc?: string; rotation?: number; rotationX?: number; rotationZ?: number; exposure?: number; blur?: number; parallax?: number; screenOverlaySrc?: string; coverOverlaySrc?: string; revealSrc?: string; depthSrc?: string; depthEnabled?: boolean; depthStrength?: number; finish?: 'night-sky' | 'star-white'; dragToRotate?: boolean; sceneOrbit?: boolean; onRotationStart?: () => void; onRotationEnd?: () => void; onRotationChange?: (rotation: DeviceRotation) => void; zoom?: number; zoomScale?: number; onZoomChange?: (zoom: number) => void; language?: 'zh' | 'en' }
+export type PhoneDeviceProps = ComponentProps<'div'> & { homeScale?: number; browsePhotos?: boolean; coverPhotoPosition?: number; coverPhotoActive?: boolean; coverPhotoRetraction?: number; onCoverPhotoState?: (state: { ready: boolean; prepared: boolean; index: number; target: number; busy: boolean; error: string }) => void; diorama?: boolean; memorySceneId?: string; onSceneReadyChange?: (ready: boolean) => void; sceneMotion?: boolean; interactionEpoch?: number; onReadyChange?: (ready: boolean) => void; modelSrc: string; screenSrc: string; videoSrc?: string; videoPlaying?: boolean; wallpaperMode?: string; screenOrientation?: number; screenLayoutVariant?: 'default' | 'seated'; foldEffects?: boolean; foldProjection?: boolean; innerFocusFlip?: boolean; coverSrc?: string; rotation?: number; rotationX?: number; rotationZ?: number; exposure?: number; blur?: number; parallax?: number; screenOverlaySrc?: string; coverOverlaySrc?: string; revealSrc?: string; depthSrc?: string; depthEnabled?: boolean; depthStrength?: number; finish?: 'night-sky' | 'star-white'; dragToRotate?: boolean; sceneOrbit?: boolean; onRotationStart?: () => void; onRotationEnd?: () => void; onRotationChange?: (rotation: DeviceRotation) => void; zoom?: number; zoomScale?: number; onZoomChange?: (zoom: number) => void; language?: 'zh' | 'en' }
 
 const DEVICE_STATUS_COPY = {
   zh: {
@@ -53,7 +54,7 @@ export function PhoneDevice(props: PhoneDeviceProps) {
   return <PhoneDeviceSurface key={props.modelSrc} {...props} />
 }
 
-function PhoneDeviceSurface({ homeScale = 1, browsePhotos = false, coverPhotoPosition, coverPhotoActive = true, onCoverPhotoState, diorama = false, memorySceneId = 'lighthouse', onSceneReadyChange, sceneMotion = true, interactionEpoch = 0, onReadyChange, modelSrc, screenSrc, coverSrc = screenSrc, videoSrc, videoPlaying = true, wallpaperMode = "full", screenOrientation = 0, screenLayoutVariant = 'default', foldEffects = true, foldProjection = true, innerFocusFlip = false, screenOverlaySrc, coverOverlaySrc, revealSrc, depthSrc, depthEnabled = true, depthStrength = 0.3, finish = 'star-white', rotation = -6, rotationX = 0, rotationZ = 0, dragToRotate = false, sceneOrbit = false, onRotationStart, onRotationEnd, onRotationChange, zoom = 0.991875, zoomScale = 1, onZoomChange, exposure = 1.2, blur = 28, parallax = 1, language = 'en', className = '', ...props }: PhoneDeviceProps) {
+function PhoneDeviceSurface({ homeScale = 1, browsePhotos = false, coverPhotoPosition, coverPhotoActive = true, coverPhotoRetraction = 0, onCoverPhotoState, diorama = false, memorySceneId = 'lighthouse', onSceneReadyChange, sceneMotion = true, interactionEpoch = 0, onReadyChange, modelSrc, screenSrc, coverSrc = screenSrc, videoSrc, videoPlaying = true, wallpaperMode = "full", screenOrientation = 0, screenLayoutVariant = 'default', foldEffects = true, foldProjection = true, innerFocusFlip = false, screenOverlaySrc, coverOverlaySrc, revealSrc, depthSrc, depthEnabled = true, depthStrength = 0.3, finish = 'star-white', rotation = -6, rotationX = 0, rotationZ = 0, dragToRotate = false, sceneOrbit = false, onRotationStart, onRotationEnd, onRotationChange, zoom = 0.991875, zoomScale = 1, onZoomChange, exposure = 1.2, blur = 28, parallax = 1, language = 'en', className = '', ...props }: PhoneDeviceProps) {
   const { progress, setValue, toggle } = useFoldablePhone()
   const reducedMotion = useReducedMotion()
   const canvas = useRef<HTMLCanvasElement>(null)
@@ -130,12 +131,21 @@ function PhoneDeviceSurface({ homeScale = 1, browsePhotos = false, coverPhotoPos
   const [ready, setReady] = useState(false)
   useEffect(() => { onReadyChange?.(ready) }, [ready, onReadyChange])
   const loadedScene = useRef('lighthouse')
+  const preparation = useRef<Promise<void> | null>(null)
   useEffect(() => {
     if (!ready || !surface.current?.diorama || loadedScene.current === memorySceneId) return
     let cancelled = false
     loadedScene.current = memorySceneId
     onSceneReadyChange?.(false)
-    surface.current.diorama.selectScene(memorySceneId).then(loaded => {
+    const current = surface.current
+    // Photo input is already live. Keep the preparing model's materials alive
+    // until compileAsync releases them, then mount only the latest selection.
+    const select = async () => {
+      await preparation.current?.catch(() => {})
+      if (cancelled || surface.current !== current) return false
+      return current.diorama!.selectScene(memorySceneId)
+    }
+    select().then(loaded => {
       if (cancelled || !loaded) return
       // Initial startup primes the renderer. Recompiling asynchronously here can
       // retain materials from a scene that the next photograph already disposed.
@@ -154,12 +164,12 @@ function PhoneDeviceSurface({ homeScale = 1, browsePhotos = false, coverPhotoPos
     const morph = createCoverMorph({ material: current.model.cover, photos: MEMORY_PHOTOS,
       draw: current.draw, element: current.renderer.domElement, onState: reportCoverPhoto, scene: current.scene,
       coverMesh: current.model.body.getObjectByName('skeleton_0_7_outerDisplayScreenTexture_geo'),
-      warmup: current.warmup })
+      warmup: () => { preparation.current = current.warmup(); return preparation.current } })
     coverMorph.current = morph
     return () => { morph.dispose(); coverMorph.current = null }
   }, [ready, hasCoverMorph])
   useEffect(() => { if (coverPhotoPosition !== undefined) coverMorph.current?.seek(coverPhotoPosition) }, [ready, coverPhotoPosition])
-  useEffect(() => { coverMorph.current?.activity(coverPhotoActive, Boolean(reducedMotion)) }, [ready, coverPhotoActive, reducedMotion])
+  useEffect(() => { coverMorph.current?.activity(coverPhotoActive, Boolean(reducedMotion), coverPhotoRetraction) }, [ready, coverPhotoActive, reducedMotion, coverPhotoRetraction])
   const [amount, setAmount] = useState(progress.get())
   const quarterTurnLayout = Math.abs(Math.sin(screenOrientation)) > 0.5
   const update = useEffectEvent(() => {
@@ -377,10 +387,17 @@ function PhoneDeviceSurface({ homeScale = 1, browsePhotos = false, coverPhotoPos
         element.dataset.renderScale = ratio.toFixed(2)
       }
       renderer.setSize(width, height, false)
-      camera.aspect = width / height
-      const span = Math.max(16, 21 / camera.aspect)
-      camera.fov = 2 * Math.atan(span / 72) * 180 / Math.PI
-      camera.updateProjectionMatrix()
+      if (diorama) {
+        const style = getComputedStyle(element)
+        frameSceneCamera(camera, width, height,
+          parseFloat(style.getPropertyValue('--memory-frame-top')) || 0,
+          parseFloat(style.getPropertyValue('--memory-frame-bottom')) || 0)
+      } else {
+        camera.aspect = width / height
+        const span = Math.max(16, 21 / camera.aspect)
+        camera.fov = 2 * Math.atan(span / 72) * 180 / Math.PI
+        camera.updateProjectionMatrix()
+      }
       render()
     }
     const observer = new ResizeObserver(resize)
@@ -395,6 +412,7 @@ function PhoneDeviceSurface({ homeScale = 1, browsePhotos = false, coverPhotoPos
         render()
       }) : undefined
       const warmup = async () => {
+        const sceneId = loadedScene.current
         await miniature?.ready
         if (disposed) return
         const started = performance.now()
@@ -415,12 +433,15 @@ function PhoneDeviceSurface({ homeScale = 1, browsePhotos = false, coverPhotoPos
         // Early water has no lantern; later reflections have a point light.
         // Exercise both using the actual opening camera path, including both pages.
         for (const p of [0, .02, .12, .24, .35, .7, 1]) {
+          // Give input and photo frames a turn between preparation passes.
+          await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
+          if (disposed || loadedScene.current !== sceneId) return
           prepare(p)
           let compiled: Promise<unknown>
           try { compiled = renderer.compileAsync(scene, camera) }
           finally { update() }
           await compiled
-          if (disposed) return
+          if (disposed || loadedScene.current !== sceneId) return
           prepare(p)
           try {
             renderer.render(scene, camera)

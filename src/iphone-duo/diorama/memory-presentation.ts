@@ -10,9 +10,15 @@ export const MEMORY_SCENE_POSE = {
   rotation: { x: -72, y: 0, z: 0 }, zoom: 1.18,
 }
 
-export const MEMORY_PRESENTATION_DURATION = 5400
+export const MEMORY_PRESENTATION_DURATION = 4320
 export const MEMORY_RETURN_DURATION = 1100
-const PHOTO_HOLD = 400
+const PHOTO_HOLD = 320
+
+// Share the opening clock: photos enter the cover before the hinge moves;
+// rewinding releases them along exactly the same path.
+export function getPhotoRetraction(elapsedMs: number) {
+  return MathUtils.smoothstep(elapsedMs, 0, PHOTO_HOLD)
+}
 type MemoryView = Pick<typeof MEMORY_CLOSED_POSE, 'fold' | 'rotation' | 'zoom' | 'orientation'>
 
 // Read the same clock backwards to rewind from the user's inspected scene view.

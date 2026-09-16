@@ -13,7 +13,3 @@ export function getPopUpState(progress: number): PopUpState {
     lighthouse: ease(55, 145, angle),
   }
 }
-
-export function getRigidSceneRise(progress: number) {
-  return ease(.88, 1, progress)
-}

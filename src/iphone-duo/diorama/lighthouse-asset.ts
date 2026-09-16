@@ -1,5 +1,6 @@
 import { Group, Mesh, PointLight, Texture, type Object3D, type Material, type BufferGeometry } from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { createSpreadLayout } from './spread-layout.ts'
 
 function assetDisposer(scene: Object3D) {
   const geometries = new Set<BufferGeometry>()
@@ -24,7 +25,7 @@ function assetDisposer(scene: Object3D) {
 }
 
 /** Convert the authored page coordinates without independently centering or scaling modules. */
-export function prepareLighthouseAsset(scene: Object3D) {
+export function prepareLighthouseAsset(scene: Object3D, sceneId?: string) {
   const disposeResources = assetDisposer(scene)
   const sources = ['Lighthouse', 'Cabin0', 'Cabin1', 'TerrainLeft', 'TerrainRight'].map(name => {
     const value = scene.getObjectByName(name)
@@ -72,12 +73,17 @@ export function prepareLighthouseAsset(scene: Object3D) {
   lantern.name = 'warm-lantern-light'
   const lightAnchor = nodes[0].getObjectByName('LanternLightAnchor')
   lightAnchor?.add(lantern)
+  const spread = sceneId ? createSpreadLayout(nodes,sceneId) : undefined
   return {
-    nodes, left, right, terrain: [nodes[3], nodes[4]], cabins: [nodes[1], nodes[2]], lighthouse: [nodes[0]],
+    nodes, left: spread?.left ?? left, right: spread?.right ?? right,
+    terrain: spread?.terrain ?? [nodes[3],nodes[4]], cabins: spread?.cabins ?? [nodes[1],nodes[2]], lighthouse: spread?.lighthouse ?? [nodes[0]],
+    animate: spread?.animate,
+    composition: spread?.composition,
     update(timeSeconds = 0, motionEnabled = false) {
       lantern.intensity = motionEnabled ? .02 + Math.sin(timeSeconds * 1.7) * .002 : .02
+      spread?.lights.forEach(light=>{light.intensity=lantern.intensity})
     },
-    dispose() { left.removeFromParent(); right.removeFromParent(); nodes.forEach(node => node.removeFromParent()); disposeResources() },
+    dispose() { spread?.dispose(); left.removeFromParent(); right.removeFromParent(); nodes.forEach(node => node.removeFromParent()); disposeResources() },
   }
 }
 
@@ -90,5 +96,5 @@ export async function loadLighthouseAsset(sceneId = 'lighthouse') {
     'osaka-castle': '/scenes/osaka-castle/osaka-castle-memory.glb',
   }
   const gltf = await new GLTFLoader().loadAsync(paths[sceneId] ?? paths.lighthouse)
-  return prepareLighthouseAsset(gltf.scene)
+  return prepareLighthouseAsset(gltf.scene, sceneId)
 }

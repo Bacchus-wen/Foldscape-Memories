@@ -20,6 +20,15 @@ test('photo navigation remains available during a partial transfer and scene loa
     };
     const render = overrides => renderToStaticMarkup(React.createElement(Experience, { ...props, ...overrides }));
     const html = render();
+    const footer = html.match(/<footer[\s\S]*?<\/footer>/)?.[0] ?? '';
+    assert.match(footer, /aria-label="Next photograph"/, 'photo navigation belongs below the scene, not over the screen');
+    assert.match(footer, /aria-label="Photograph 1 of 5"/, 'the collection exposes its position');
+    const entrance = render({ photoJourney: { position: 0, frame: samplePhotoJourney(0, 5) } });
+    assert.match(entrance, /Scroll to discover/);
+    assert.doesNotMatch(entrance.match(/<footer[\s\S]*?<\/footer>/)?.[0] ?? '', /memory-stage-caption/, 'entrance omits case title and description');
+    assert.doesNotMatch(entrance, /aria-label="Next photograph"/, 'entrance keeps photo browsing controls out of view');
+    const scene = render({ phase: 'exploring', fold: 1, photoCoverView: false });
+    assert.match(scene, /memory-photo-navigation[^>]*hidden/, 'photo controls leave with the photographs');
     assert.equal(html.match(/data-browsing="([^"]+)"/)?.[1], 'true', 'a transfer must not disable its own input');
     const next = html.match(/<button[^>]*aria-label="Next photograph"[^>]*>/)?.[0];
     assert.ok(next && !next.includes('disabled'), 'next photo remains actionable');

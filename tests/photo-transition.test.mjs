@@ -48,3 +48,27 @@ test('hidden playback pauses; disposal prevents further frames or callbacks', as
   assert.equal(frames, disposedFrames);
   assert.ok(states.every(s => s.busy));
 });
+import { Scene, Texture, TextureLoader } from 'three';
+import { createCoverMorph, createMorphUniforms } from '../src/iphone-duo/cover-morph.js';
+
+test('photographs become browsable before scene preparation finishes', async () => {
+  const original = TextureLoader.prototype.loadAsync;
+  TextureLoader.prototype.loadAsync = async () => new Texture({ width: 120, height: 80 });
+  let release, morph;
+  const warming = new Promise(resolve => { release = resolve; });
+  const states = [];
+  try {
+    morph = createCoverMorph({ material: { uniforms: createMorphUniforms() },
+      photos: [0, 1].map(index => ({ image: `${index}.jpg`, crop: [0, 0, 1, 1] })),
+      scene: new Scene(), element: { dataset: {} }, draw() {},
+      onState: state => states.push(state), warmup: () => warming });
+    await new Promise(resolve => setTimeout(resolve, 0));
+    assert.equal(states.at(-1).ready, true, 'model warmup must not lock photo browsing');
+    assert.equal(states.at(-1).prepared, false, 'opening still waits for GPU preparation');
+    morph.seek(1.5);
+    assert.equal(states.at(-1).busy, true, 'input works while preparation is pending');
+    release();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    assert.equal(states.at(-1).prepared, true);
+  } finally { release(); morph?.dispose(); TextureLoader.prototype.loadAsync = original; }
+});

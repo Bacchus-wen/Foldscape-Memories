@@ -4,14 +4,15 @@ import { Reflector } from 'three/addons/objects/Reflector.js'
 // Each half reflects the actual architecture from its own moving screen plane.
 // Hiding both water surfaces during reflection prevents recursive mirror passes.
 export function createCoastalWater(left: Group, right: Group, resolution = 768) {
-  const shape = new Shape()
-  const x = .525, y = .733, radius = .075
-  shape.moveTo(-x + radius, -y)
-  shape.lineTo(x - radius, -y).quadraticCurveTo(x, -y, x, -y + radius)
-  shape.lineTo(x, y - radius).quadraticCurveTo(x, y, x - radius, y)
-  shape.lineTo(-x + radius, y).quadraticCurveTo(-x, y, -x, y - radius)
-  shape.lineTo(-x, -y + radius).quadraticCurveTo(-x, -y, -x + radius, -y)
-  const geometry = new ShapeGeometry(shape, 12)
+  const geometries = [0,1].map(side=>{
+    const shape=new Shape(),x=.5/.94,y=.74379,r=.06
+    const l=side?0:r,rr=side?r:0
+    shape.moveTo(-x+l,-y).lineTo(x-rr,-y).quadraticCurveTo(x,-y,x,-y+rr)
+    shape.lineTo(x,y-rr).quadraticCurveTo(x,y,x-rr,y)
+    shape.lineTo(-x+l,y).quadraticCurveTo(-x,y,-x,y-l)
+    shape.lineTo(-x,-y+l).quadraticCurveTo(-x,-y,-x+l,-y)
+    return new ShapeGeometry(shape,12)
+  })
   const shader = {
     name: 'Lighthouse coastal reflection',
     uniforms: {
@@ -20,6 +21,7 @@ export function createCoastalWater(left: Group, right: Group, resolution = 768) 
       textureMatrix: { value: null },
       pageOffset: { value: 0 },
       time: { value: 0 },
+      landMask: { value: 0 },
     },
     vertexShader: `
       uniform mat4 textureMatrix;
@@ -43,6 +45,7 @@ export function createCoastalWater(left: Group, right: Group, resolution = 768) 
       uniform vec3 color;
       uniform sampler2D tDiffuse;
       uniform float time;
+      uniform float landMask;
       varying vec4 vReflection;
       varying vec2 vCoast;
       varying vec3 vWorldPosition;
@@ -57,6 +60,7 @@ export function createCoastalWater(left: Group, right: Group, resolution = 768) 
       void main() {
         #include <logdepthbuf_fragment>
         vec2 p = vCoast;
+        if (landMask > .5 && p.y < .44+.055*sin(p.x*4.0)+.018*sin(p.x*17.0)) discard;
         float phase = time * .2;
         float longWave = sin(p.y*165.0 + noise(p*vec2(13.0,22.0))*9.0 + phase);
         float smallWave = sin(p.y*710.0 + noise(p*vec2(39.0,48.0))*12.0 - phase);
@@ -81,7 +85,7 @@ export function createCoastalWater(left: Group, right: Group, resolution = 768) 
     `,
   }
   const waters = [left, right].map((parent, index) => {
-    const water = new Reflector(geometry, {
+    const water = new Reflector(geometries[index], {
       textureWidth: resolution, textureHeight: resolution, clipBias: .001,
       color: '#647db7', multisample: 0, shader,
     })
@@ -93,8 +97,8 @@ export function createCoastalWater(left: Group, right: Group, resolution = 768) 
     return water
   })
   const shadowMaterial = new ShadowMaterial({ color: '#26345e', opacity: .32, depthWrite: false })
-  const shadows = [left, right].map(parent => {
-    const shadow = new Mesh(geometry, shadowMaterial)
+  const shadows = [left, right].map((parent,index) => {
+    const shadow = new Mesh(geometries[index], shadowMaterial)
     shadow.name = 'coastal-water-shadows'
     shadow.position.z = .0083
     shadow.receiveShadow = true
@@ -125,7 +129,7 @@ export function createCoastalWater(left: Group, right: Group, resolution = 768) 
       waters.forEach(water => { water.removeFromParent(); water.dispose() })
       shadows.forEach(shadow => shadow.removeFromParent())
       shadowMaterial.dispose()
-      geometry.dispose()
+      geometries.forEach(geometry=>geometry.dispose())
     },
   }
 }

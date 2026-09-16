@@ -11,6 +11,7 @@
     "assets:iphone-model": "node scripts/prepare-model.mjs",
     "test:sites": "node --test tests/sites-worker.test.mjs",
     "test:focus": "node --experimental-strip-types --test tests/fold-focus.test.mjs",
+    "test:scene-layout": "node --experimental-strip-types --test tests/spread-layout.test.mjs tests/scene-layout.test.mjs tests/lighthouse-asset.test.mjs tests/pop-up-motion.test.mjs tests/coastal-water.test.mjs",
     "test:demo": "node --experimental-strip-types --test tests/pop-up-motion.test.mjs tests/page-anchors.test.mjs tests/lighthouse-geometry.test.mjs tests/lighthouse-asset.test.mjs tests/demo-playback.test.mjs tests/coastal-water.test.mjs tests/memory-presentation.test.mjs tests/memory-playback.test.mjs tests/gesture-motion.test.mjs tests/coastal-audio.test.mjs tests/photo-transition.test.mjs tests/photo-journey.test.mjs tests/circular-gallery.test.mjs tests/frame-budget.test.mjs tests/photo-browse-ui.test.mjs",
     "test": "npm run test:focus && npm run test:sites && npm run test:demo"
   },

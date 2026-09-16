@@ -27,7 +27,7 @@ import { createMemoryPlayback } from "./iphone-duo/diorama/memory-playback";
 import { useMemoryAudio } from "./iphone-duo/diorama/use-memory-audio";
 import { openingAngleToProgress, progressToOpeningAngle } from "./iphone-duo/fold-choreography";
 import { SEA_SCREEN, useLighthousePhoto } from "./iphone-duo/diorama/use-lighthouse-photo";
-import { MEMORY_CLOSED_POSE, MEMORY_SCENE_POSE, MEMORY_PRESENTATION_DURATION, MEMORY_RETURN_DURATION } from "./iphone-duo/diorama/memory-presentation";
+import { MEMORY_CLOSED_POSE, MEMORY_SCENE_POSE, MEMORY_PRESENTATION_DURATION, MEMORY_RETURN_DURATION, getPhotoRetraction } from "./iphone-duo/diorama/memory-presentation";
 import {
   createFastDepthMap,
   depthBytesToDataUrl,
@@ -282,7 +282,7 @@ export function App({ initialView = "memory" }) {
   const [activeView, setActiveView] = useState(initialView);
   const isMemory = activeView === "memory";
   const lighthousePhoto = useLighthousePhoto();
-  const [coverPhoto, setCoverPhoto] = useState({ ready: false, index: 0, target: 0, busy: false, error: "" });
+  const [coverPhoto, setCoverPhoto] = useState({ ready: false, prepared: false, index: 0, target: 0, busy: false, error: "" });
   const [sceneReady, setSceneReady] = useState(true);
   const selectedMemory = MEMORY_PHOTOS[coverPhoto.index];
   const [pendingPhotoOpen, setPendingPhotoOpen] = useState(false);
@@ -312,7 +312,7 @@ export function App({ initialView = "memory" }) {
   const [screenOrientation, setScreenOrientation] = useState(initialPose.orientation);
   const activePoseIndex = Math.max(0, DISPLAY_POSES.findIndex((item) => item.id === pose));
   const copy = UI_COPY[language];
-  const presentationReady = deviceReady && Boolean(lighthousePhoto.cover) && (!isMemory || (coverPhoto.ready && sceneReady && !coverPhoto.busy));
+  const presentationReady = deviceReady && Boolean(lighthousePhoto.cover) && (!isMemory || (coverPhoto.ready && coverPhoto.prepared && sceneReady && !coverPhoto.busy));
   const inspectingScene = isMemory && presentationState === "complete";
   const rewinding = isMemory && presentationDirection.current === -1;
   const playLabel = isMemory
@@ -640,7 +640,8 @@ export function App({ initialView = "memory" }) {
   };
 
   const openWithPhotograph = () => {
-    if (!autoDemo && !inspectingScene && (coverPhoto.busy || !sceneReady)) {
+    if (!autoDemo && !inspectingScene) photoJourney.stop();
+    if (!autoDemo && !inspectingScene && !presentationReady) {
       pendingPhotoIndex.current = coverPhoto.index;
       setPendingPhotoOpen(true);
       photoJourney.select(coverPhoto.index);
@@ -790,6 +791,7 @@ export function App({ initialView = "memory" }) {
 
   const phase = inspectingScene ? "exploring" : autoDemo && elapsed < 0 ? "returning" : presentationState === "paused" ? "paused" : autoDemo ? "playing" : "cover";
   const photoCoverView = isMemory && phase === "cover" && fold < .002 && Math.abs(modelRotation.x) < .1 && Math.abs(modelRotation.y) < .1 && Math.abs(modelRotation.z - 90) < .1;
+  const photoRetraction = phase === "cover" ? (photoCoverView ? 0 : 1) : elapsed < 0 ? 1 : getPhotoRetraction(elapsed);
   const framingProgress = Math.min(1, fold / .8);
   const homeScale = photoJourney.frame.scale + (1 - photoJourney.frame.scale) * framingProgress * framingProgress * (3 - 2 * framingProgress);
   const memoryPoses = [SCENE_POSE, DISPLAY_POSES[1], MEMORY_CLOSED_POSE];
@@ -813,7 +815,8 @@ export function App({ initialView = "memory" }) {
             screenSrc={isMemory ? SEA_SCREEN : activeImage}
             coverSrc={isMemory ? lighthousePhoto.cover || activeCoverImage : activeCoverImage}
             coverPhotoPosition={isMemory ? photoJourney.position : undefined}
-            coverPhotoActive={photoCoverView && !overlayOpen}
+            coverPhotoActive={isMemory && photoRetraction < 1 && !overlayOpen}
+            coverPhotoRetraction={photoRetraction}
             homeScale={isMemory ? homeScale : 1}
             browsePhotos={photoCoverView}
             onCoverPhotoState={setCoverPhoto}

@@ -1,7 +1,7 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
-import { motion, useAnimationControls, useReducedMotion, useSpring } from 'motion/react';
+import { motion, useAnimationControls, useReducedMotion } from 'motion/react';
 import { ArrowUpRight, ArrowsClockwise, CaretRight, Check, ImageSquare, Pause, Play, Rewind, SlidersHorizontal, SpeakerHigh, SpeakerSlash, X } from '@phosphor-icons/react';
-import MemoryPhotoRibbon from './MemoryPhotoRibbon';
+import MemoryPhotoRibbon, { MemoryPhotoNavigation } from './MemoryPhotoRibbon';
 import { gsap } from 'gsap';
 import { Observer } from 'gsap/Observer';
 import { MEMORY_PHOTOS } from '../iphone-duo/memory-photos';
@@ -33,25 +33,6 @@ function MemoryDialog({ open, onClose, title, className = '', children }) {
   </dialog>;
 }
 
-// The restrained spring tilt follows React Bits' Tilted Card interaction pattern.
-// Source reference: https://reactbits.dev/components/tilted-card
-function PhotoEntrance({ onClick, photo }) {
-  const reduced = useReducedMotion();
-  const rotateX = useSpring(0, { stiffness: 180, damping: 24 });
-  const rotateY = useSpring(0, { stiffness: 180, damping: 24 });
-  return <motion.button type="button" className="memory-photo-entrance" onClick={onClick}
-    style={{ rotateX, rotateY }}
-    onPointerMove={event => {
-      if (reduced || event.pointerType !== 'mouse') return;
-      const rect = event.currentTarget.getBoundingClientRect();
-      rotateX.set(-(event.clientY - rect.top - rect.height / 2) / rect.height * 5);
-      rotateY.set((event.clientX - rect.left - rect.width / 2) / rect.width * 5);
-    }} onPointerLeave={() => { rotateX.set(0); rotateY.set(0); }}>
-    <span className="memory-photo-thumb"><img src={photo.image} alt="" /></span>
-    <span><strong>{photo.title}</strong><span>View original photo <ArrowUpRight size={14} /></span></span>
-  </motion.button>;
-}
-
 function SettingToggle({ title, detail, checked, onChange, disabled = false }) {
   return <div className="memory-setting-row"><span><strong>{title}</strong>{detail && <small>{detail}</small>}</span>
     <button className="memory-switch" type="button" role="switch" aria-label={title} aria-checked={checked} disabled={disabled} onClick={() => onChange(!checked)}><span /></button>
@@ -65,6 +46,8 @@ export default function MemoryExperience({ children, photoJourney, photoCoverVie
   const immersive = fold > .13 || phase === 'exploring';
   const exploring = phase === 'exploring';
   const isReturning = phase === 'returning';
+  const collection = photoJourney.position >= .98;
+  const reveal = photoJourney.frame.reveal;
   const photo = MEMORY_PHOTOS[coverPhoto.index];
   const canRequestOpen = phase === 'cover' && coverPhoto.ready && photo.scene;
   const playLabel = pendingPhotoOpen || (!ready && !canRequestOpen) ? 'Preparing memory' : playing ? (rewinding ? 'Pause rewind' : 'Pause memory') : phase === 'paused' ? (rewinding ? 'Continue rewind' : 'Continue memory') : exploring ? 'Rewind' : 'Open memory';
@@ -83,7 +66,7 @@ export default function MemoryExperience({ children, photoJourney, photoCoverVie
     const observer = Observer.create({
       id: 'memory-gallery-wheel', target: element, type: 'wheel', preventDefault: true,
       ignore: 'dialog, input, select, textarea',
-      ignoreCheck: event => event.ctrlKey || (window.innerHeight < 740 && !event.target.closest('.memory-stage')),
+      ignoreCheck: event => event.ctrlKey || (window.innerHeight < 740 && !event.target.closest('.memory-photo-gesture')),
       onChange: scrollPhotographs,
     });
     element.dataset.inputDriver = 'gsap-observer';
@@ -93,7 +76,8 @@ export default function MemoryExperience({ children, photoJourney, photoCoverVie
     if (playing) setPanel(null);
   }, [playing]);
   const transition = { duration: reduced ? 0 : .65, ease: [.22, 1, .36, 1] };
-  return <div ref={root} className={`memory-experience ${immersive ? 'is-immersive' : 'is-cover'}`} data-phase={phase} data-journey={photoJourney.position.toFixed(4)} data-browsing={browse}>
+  const layoutState = `${collection}:${immersive}:${photoCoverView}`;
+  return <div ref={root} className={`memory-experience ${immersive ? 'is-immersive' : 'is-cover'} ${collection ? 'is-collection' : 'is-entrance'}`} data-phase={phase} data-journey={photoJourney.position.toFixed(4)} data-browsing={browse}>
     <a href="#memory-transport" className="memory-skip">Skip to memory controls</a>
     <header className="memory-header">
       <button type="button" className="memory-wordmark" onClick={onReset} aria-label="Nature Memories — return to cover">Nature Memories<span>.</span></button>
@@ -106,22 +90,28 @@ export default function MemoryExperience({ children, photoJourney, photoCoverVie
 
     <motion.section className="memory-intro" aria-label="About this memory" aria-hidden={immersive} inert={immersive || undefined}
       animate={{ opacity: immersive ? 0 : 1, y: immersive ? -18 : 0 }} transition={transition}>
-      <p className="memory-eyebrow">A place to return to</p>
-      <h1>Some places<br /><em>stay with you.</em></h1>
-      <p className="memory-description">A photograph, unfolded into a place<br className="memory-desktop-break" /> you can return to.</p>
-      <PhotoEntrance photo={photo} onClick={() => setPanel('photo')} />
+      <div className="memory-entrance-heading" style={{ opacity: Math.max(0, 1 - reveal / .45), transform: `translateY(${-12 * reveal}px)` }}>
+        <p className="memory-eyebrow">A place to return to</p>
+        <h1>Some places <em>stay with you.</em></h1>
+        <p className="memory-description">A photograph, unfolded into a place you can return to.</p>
+      </div>
+      <div className="memory-collection-heading" aria-hidden="true" style={{ opacity: Math.max(0, (reveal - .45) / .55), transform: `translateY(${12 * (1 - reveal)}px)` }}>
+        <p className="memory-display-title">Some places<br /><em>stay with you.</em></p>
+        <p className="memory-description">A photograph, unfolded<br /> into a place you can<br /> return to.</p>
+      </div>
     </motion.section>
     <motion.div className="memory-scene-heading" aria-hidden={!immersive} inert={!immersive || undefined}
       animate={{ opacity: immersive ? 1 : 0, y: immersive ? 0 : 12 }} transition={transition}>
       <p className="memory-eyebrow">A moment, unfolded</p><h2>{photo.title}<span>.</span></h2>
-      <p>Take your time. Look around.</p>
+      <p>{exploring ? 'Take your time. Look around.' : 'From a photograph to a place.'}</p>
     </motion.div>
 
     <div className="memory-stage">{children}<MemoryPhotoRibbon journey={photoJourney} visible={photoCoverView} disabled={!browse} /></div>
 
-    <footer className="memory-footer">
-      <div className="memory-stage-caption"><span className="memory-caption-dot" />{photo.title}<span className="memory-caption-divider" />{photo.detail}</div>
-      <div className="memory-transport" id="memory-transport" role="group" aria-label="Memory playback">
+    <motion.footer className="memory-footer" layout="position" layoutDependency={layoutState} transition={transition}>
+      <MemoryPhotoNavigation journey={photoJourney} visible={photoCoverView} disabled={!browse} />
+      {(collection || immersive) && <motion.div className="memory-stage-caption" layout="position" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={transition}><span className="memory-caption-dot" /><strong>{photo.title}</strong><span className="memory-caption-divider" /><span className="memory-caption-detail">{photo.detail}</span></motion.div>}
+      <motion.div className="memory-transport" id="memory-transport" role="group" aria-label="Memory playback" layout="position" layoutDependency={layoutState} transition={transition}>
         <button className="memory-primary" type="button" disabled={(!ready && !canRequestOpen) || pendingPhotoOpen} onClick={onPlay} aria-label={playLabel}>
           {playing ? <Pause size={17} weight="fill" /> : exploring || (rewinding && phase === 'paused') ? <Rewind size={18} weight="fill" /> : <Play size={17} weight="fill" />}<span>{playLabel}</span>
         </button>
@@ -135,9 +125,9 @@ export default function MemoryExperience({ children, photoJourney, photoCoverVie
           <button type="button" className="memory-icon-button" aria-label="View original photo" aria-haspopup="dialog" onClick={() => setPanel('photo')}><ImageSquare size={20} /></button>
           <button type="button" className={`memory-icon-button ${(sound.coast || sound.music) ? 'is-on' : ''}`} aria-label="Sound settings" aria-haspopup="dialog" onClick={() => setPanel('sound')}>{sound.coast || sound.music ? <SpeakerHigh size={20} /> : <SpeakerSlash size={20} />}</button>
         </div>
-      </div>
+      </motion.div>
       <p className="memory-status" role="status" aria-live="polite">{status}</p>
-    </footer>
+    </motion.footer>
 
     <MemoryDialog open={panel === 'photo'} onClose={() => setPanel(null)} title="The original photograph" className="memory-photo-dialog">
       <figure><div className={`memory-original-frame ${photo.scene ? '' : 'is-study'}`}><img src={photo.image} alt={photo.title} /></div>

@@ -144,21 +144,23 @@ class Media {
     this.plane = new Mesh(geometry, this.program);
     this.plane.frustumCulled = false;
   }
-  update(frame, index, aspect, reduced) {
+  update(frame, index, aspect, reduced, retraction = 0) {
     const card = photoPlacement(index, frame);
     const pose = circularGalleryPose(card.center - .5);
-    this.plane.position.set(pose.x, pose.y, pose.z);
-    this.plane.rotation.set(0, pose.yaw, pose.roll);
-    this.plane.scale.set(card.width, card.width / aspect, card.width);
+    const spread = 1 - retraction;
+    this.plane.position.set(pose.x * spread, pose.y * spread, pose.z * spread - retraction * .3);
+    this.plane.rotation.set(0, pose.yaw * spread, pose.roll * spread);
+    const width = card.width * (1 - .2 * retraction);
+    this.plane.scale.set(width, width / aspect, width);
     this.plane.renderOrder = 20 - Math.round(-pose.z * 2);
     const active = index === frame.current || index === frame.next;
     const edge = index === frame.current ? 0 : 1;
     const stretch = active ? Math.max(0, 1 - Math.abs(card.center - edge) / .5) * Math.sin(frame.time * Math.PI) : 0;
     Object.assign(this.program.uniforms.uTime, { value: frame.cursor * 1.1 });
     this.program.uniforms.uSpeed.value = Math.sin(frame.time * Math.PI) * .06;
-    this.program.uniforms.uStretch.value = stretch;
+    this.program.uniforms.uStretch.value = Math.max(stretch, Math.sin(retraction * Math.PI) * .85);
     this.program.uniforms.uContact.value = Math.max(0, Math.min(1, (edge - card.center) / card.width + .5));
-    this.program.uniforms.uEdge.value = index === frame.current ? 1 : -1;
+    this.program.uniforms.uEdge.value = card.center < .5 ? 1 : -1;
     this.program.uniforms.uDepth.value = -pose.z;
     this.program.uniforms.uOpacity.value = frame.reveal;
     this.program.uniforms.uReduce.value = reduced ? 1 : 0;
@@ -181,10 +183,11 @@ export default class CircularGallery {
     scene.add(this.root);
     this.root.visible = false;
   }
-  update(frame, visible, reduced) {
+  update(frame, visible, reduced, retraction = 0) {
     this.frame = frame;
     this.reduced = reduced;
-    this.root.visible = visible && frame.reveal > 0;
+    this.retraction = retraction;
+    this.root.visible = visible && frame.reveal > 0 && retraction < 1;
   }
   project(camera, bounds, depth) {
     if (!this.frame) return;
@@ -199,7 +202,7 @@ export default class CircularGallery {
     this.portal.value.fromArray(receptionBounds(left, left + width, canvasWidth));
     this.pixelRatio.value = this.element.width / Math.max(1, canvasWidth);
     const aspect = width * canvasWidth / (height * this.element.clientHeight);
-    this.medias.forEach((media, index) => media.update(this.frame, index, aspect, this.reduced));
+    this.medias.forEach((media, index) => media.update(this.frame, index, aspect, this.reduced, this.retraction));
   }
   dispose() {
     this.root.removeFromParent();

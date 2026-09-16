@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { samplePhotoJourney, photoPlacement, createPhotoJourney } from '../src/iphone-duo/photo-journey.js';
 
-test('starts alone, shrinks to exactly three quarters, then locks framing', () => {
+test('starts alone, shrinks to 77 percent, then locks framing', () => {
   const start = samplePhotoJourney(0, 4), arrived = samplePhotoJourney(1, 4);
   assert.equal(start.reveal, 0);
   assert.equal(start.cursor, 0);
-  assert.equal(arrived.scale / start.scale, .75);
+  assert.equal(arrived.scale / start.scale, .77);
   for (const position of [1.1, 2, 2.8, 4]) assert.equal(samplePhotoJourney(position, 4).scale, arrived.scale);
 });
 

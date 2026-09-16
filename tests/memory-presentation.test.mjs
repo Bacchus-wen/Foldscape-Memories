@@ -1,10 +1,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { Euler, Quaternion, MathUtils } from 'three'
-import { getMemoryPresentation, MEMORY_PRESENTATION_DURATION } from '../src/iphone-duo/diorama/memory-presentation.ts'
+import { getMemoryPresentation, getPhotoRetraction, MEMORY_PRESENTATION_DURATION } from '../src/iphone-duo/diorama/memory-presentation.ts'
 import { progressToOpeningAngle } from '../src/iphone-duo/fold-choreography.ts'
 
 test('presentation starts on a closed front-facing photograph before revealing the scene', () => {
+  assert.equal(MEMORY_PRESENTATION_DURATION, 4320, 'opening and rewind take 80% of 5400ms');
   const start = getMemoryPresentation(0)
   assert.equal(start.fold, 0)
   assert.deepEqual(start.rotation, { x: 0, y: 0, z: 90 })
@@ -12,6 +13,19 @@ test('presentation starts on a closed front-facing photograph before revealing t
   assert.deepEqual(getMemoryPresentation(-100), start)
   assert.equal(getMemoryPresentation(300).fold, 0)
 })
+
+test('surrounding photographs retract continuously before the phone unfolds', () => {
+  assert.equal(getPhotoRetraction(0), 0);
+  assert.equal(getPhotoRetraction(160), .5);
+  assert.equal(getPhotoRetraction(320), 1);
+  const frames = [];
+  for (let time = 0; time <= 320; time += 16) {
+    assert.equal(getMemoryPresentation(time).fold, 0);
+    frames.push(getPhotoRetraction(time));
+  }
+  for (let i = 1; i < frames.length; i++) assert.ok(frames[i] - frames[i - 1] < .08);
+  for (let time = MEMORY_PRESENTATION_DURATION; time >= 320; time -= 16) assert.equal(getPhotoRetraction(time), 1);
+});
 
 test('opening and camera move together continuously without overshooting or looping', () => {
   let previous = getMemoryPresentation(0)
@@ -47,7 +61,7 @@ test('rewinding starts at the inspected view and continuously returns to the clo
   for (let time = MEMORY_PRESENTATION_DURATION - 16; time >= 0; time -= 16) {
     const current = getMemoryPresentation(time, inspected)
     assert.ok(current.fold <= previous.fold && current.fold >= 0)
-    assert.ok(Math.abs(current.rotation.z - previous.rotation.z) < 1)
+    assert.ok(Math.abs(current.rotation.z - previous.rotation.z) < 1.25, '80% duration allows 1.25x the former angular speed')
     assert.ok(Math.abs(current.zoom - previous.zoom) < .005)
     previous = current
   }
