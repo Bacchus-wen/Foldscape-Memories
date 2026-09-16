@@ -4,6 +4,7 @@ import { createLighthouseGeometry } from './lighthouse-geometry'
 import { getPopUpState } from './pop-up-motion'
 import { createSceneEnvironment } from './scene-environment'
 import { loadLighthouseAsset } from './lighthouse-asset'
+import { MEMORY_REFLECTION_LAYER } from './coastal-water'
 
 export function createLighthouse(screen: SkinnedMesh, host: Object3D, onAssetState?: (state: 'ready' | 'fallback') => void) {
   const anchors = createPageAnchors(screen, host)
@@ -11,10 +12,12 @@ export function createLighthouse(screen: SkinnedMesh, host: Object3D, onAssetSta
   let environment = createSceneEnvironment(anchors.left, anchors.right, 'lighthouse', resolution, screen)
   type Geometry = ReturnType<typeof createLighthouseGeometry> | Awaited<ReturnType<typeof loadLighthouseAsset>>
   let geometry: Geometry | undefined
+  let pose = { progress: 0, time: 0, motion: false }
   let layers: Record<'terrain' | 'cabins' | 'lighthouse', { node: Object3D; scale: Object3D['scale'] }[]> = { terrain: [], cabins: [], lighthouse: [] }
   const mount = (asset: Geometry) => {
     geometry?.dispose()
     geometry = asset
+    for (const page of [asset.left, asset.right]) page.traverse(object => object.layers.enable(MEMORY_REFLECTION_LAYER))
     anchors.left.add(asset.left)
     anchors.right.add(asset.right)
     for (const key of ['terrain', 'cabins', 'lighthouse'] as const) {
@@ -31,21 +34,24 @@ export function createLighthouse(screen: SkinnedMesh, host: Object3D, onAssetSta
     environment.dispose()
     environment = createSceneEnvironment(anchors.left, anchors.right, sceneId, resolution, screen)
     mount(asset)
+    // Apply the current closed/open pose before scheduling the first render.
+    // A newly loaded scene otherwise flashes fully visible and synchronously
+    // compiles its water, shadows and all model materials during photo browsing.
+    update(pose.progress, pose.time, pose.motion)
     onAssetState?.('ready')
     return true
   }).catch(error => {
     if (disposed || version !== request) return false
     // Generate the expensive procedural textures and meshes only on failure.
     if (!geometry) mount(createLighthouseGeometry())
+    update(pose.progress, pose.time, pose.motion)
     console.warn('Lighthouse asset unavailable; keeping procedural scene.', error)
     onAssetState?.('fallback')
     return false
   })
   }
-  const ready = selectScene()
-  return {
-    ready, selectScene,
-    update(progress: number, timeSeconds = 0, motionEnabled = false) {
+  function update(progress: number, timeSeconds = 0, motionEnabled = false) {
+      pose = { progress, time: timeSeconds, motion: motionEnabled }
       anchors.update()
       environment.update(progress, timeSeconds, motionEnabled)
       if (!geometry) return
@@ -60,7 +66,11 @@ export function createLighthouse(screen: SkinnedMesh, host: Object3D, onAssetSta
           node.scale.set(scale.x,scale.y,scale.z*Math.max(.001,rise))
         }
       }
-    },
+  }
+  update(0)
+  const ready = selectScene()
+  return {
+    ready, selectScene, update,
     dispose() { disposed = true; environment.dispose(); geometry?.dispose(); anchors.dispose() },
   }
 }

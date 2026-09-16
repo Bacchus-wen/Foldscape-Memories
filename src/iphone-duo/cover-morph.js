@@ -100,13 +100,18 @@ export function createCoverMorph({ material, photos, draw, element, onState, sce
       uniforms.uReduce.value = nextReduced ? 1 : 0;
       syncFrame();
     },
-    dispose() {
+    dispose(preparation) {
+      if (disposed) return;
       disposed = true;
-      gallery?.dispose();
-      uniforms.morphEnabled.value = 0;
-      uniforms.tCurrent.value = uniforms.tNext.value = null;
-      for (const texture of textures.values()) texture.dispose();
-      textures.clear();
+      const release = () => {
+        gallery?.dispose();
+        uniforms.morphEnabled.value = 0;
+        uniforms.tCurrent.value = uniforms.tNext.value = null;
+        for (const texture of textures.values()) texture.dispose();
+        textures.clear();
+      };
+      if (preparation) void preparation.catch(() => {}).finally(release);
+      else release();
     },
   };
 }

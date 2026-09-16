@@ -1,6 +1,8 @@
 import { Color, Mesh, ShadowMaterial, Shape, ShapeGeometry, type Group, type ShaderMaterial } from 'three'
 import { Reflector } from 'three/addons/objects/Reflector.js'
 
+export const MEMORY_REFLECTION_LAYER = 1
+
 // Each half reflects the actual architecture from its own moving screen plane.
 // Hiding both water surfaces during reflection prevents recursive mirror passes.
 export function createCoastalWater(left: Group, right: Group, resolution = 768) {
@@ -109,6 +111,8 @@ export function createCoastalWater(left: Group, right: Group, resolution = 768) 
   waters.forEach(water => {
     const reflect = water.onBeforeRender
     water.onBeforeRender = function (...args) {
+      // Reflect the natural scene, not another complete rendering of the phone.
+      water.getReflectionCamera(args[2]).layers.set(MEMORY_REFLECTION_LAYER)
       const visibility = surfaces.map(surface => surface.visible)
       surfaces.forEach(surface => { surface.visible = false })
       try { reflect.apply(this, args) }

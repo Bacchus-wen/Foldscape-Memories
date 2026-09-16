@@ -1,6 +1,7 @@
 import { Group, Mesh, PointLight, Texture, type Object3D, type Material, type BufferGeometry } from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { createSpreadLayout } from './spread-layout.ts'
+import { createSpreadLayoutAsync } from './spread-async.js'
 
 function assetDisposer(scene: Object3D) {
   const geometries = new Set<BufferGeometry>()
@@ -25,7 +26,7 @@ function assetDisposer(scene: Object3D) {
 }
 
 /** Convert the authored page coordinates without independently centering or scaling modules. */
-export function prepareLighthouseAsset(scene: Object3D, sceneId?: string) {
+export function prepareLighthouseAsset(scene: Object3D, sceneId?: string, buildSpread = createSpreadLayout) {
   const disposeResources = assetDisposer(scene)
   const sources = ['Lighthouse', 'Cabin0', 'Cabin1', 'TerrainLeft', 'TerrainRight'].map(name => {
     const value = scene.getObjectByName(name)
@@ -73,8 +74,7 @@ export function prepareLighthouseAsset(scene: Object3D, sceneId?: string) {
   lantern.name = 'warm-lantern-light'
   const lightAnchor = nodes[0].getObjectByName('LanternLightAnchor')
   lightAnchor?.add(lantern)
-  const spread = sceneId ? createSpreadLayout(nodes,sceneId) : undefined
-  return {
+  const finish = (spread?: ReturnType<typeof createSpreadLayout>) => ({
     nodes, left: spread?.left ?? left, right: spread?.right ?? right,
     terrain: spread?.terrain ?? [nodes[3],nodes[4]], cabins: spread?.cabins ?? [nodes[1],nodes[2]], lighthouse: spread?.lighthouse ?? [nodes[0]],
     animate: spread?.animate,
@@ -84,7 +84,9 @@ export function prepareLighthouseAsset(scene: Object3D, sceneId?: string) {
       spread?.lights.forEach(light=>{light.intensity=lantern.intensity})
     },
     dispose() { spread?.dispose(); left.removeFromParent(); right.removeFromParent(); nodes.forEach(node => node.removeFromParent()); disposeResources() },
-  }
+  })
+  const spread = sceneId ? buildSpread(nodes,sceneId) : undefined
+  return spread instanceof Promise ? spread.then(finish, error => { disposeResources(); throw error }) : finish(spread)
 }
 
 export async function loadLighthouseAsset(sceneId = 'lighthouse') {
@@ -96,5 +98,5 @@ export async function loadLighthouseAsset(sceneId = 'lighthouse') {
     'osaka-castle': '/scenes/osaka-castle/osaka-castle-memory.glb',
   }
   const gltf = await new GLTFLoader().loadAsync(paths[sceneId] ?? paths.lighthouse)
-  return prepareLighthouseAsset(gltf.scene, sceneId)
+  return prepareLighthouseAsset(gltf.scene, sceneId, createSpreadLayoutAsync)
 }

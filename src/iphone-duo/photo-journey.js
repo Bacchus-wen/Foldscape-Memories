@@ -18,6 +18,13 @@ export function samplePhotoJourney(value, count) {
     index: transfer < .5 ? current : next, busy: time > .00001 && time < .99999 };
 }
 
+// React only needs changes to labels, controls and layout stages. Continuous
+// travel goes straight to the canvas and heading MotionValues.
+export function photoJourneyUIKey(value, count) {
+  const f = samplePhotoJourney(value, count);
+  return [value >= .98, Math.floor(f.position), f.index, f.busy].join(':');
+}
+
 export function photoPlacement(index, frame) {
   const { current, next, time, reveal } = frame;
   // Keep both receiving edges aligned halfway through, even as queue spacing changes.

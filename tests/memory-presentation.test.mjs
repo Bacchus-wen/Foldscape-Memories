@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { Euler, Quaternion, MathUtils } from 'three'
-import { getMemoryPresentation, getPhotoRetraction, MEMORY_PRESENTATION_DURATION } from '../src/iphone-duo/diorama/memory-presentation.ts'
+import { getMemoryPresentation, getPhotoRetraction, MEMORY_PRESENTATION_DURATION, MEMORY_MAX_ZOOM, MEMORY_ORBIT_DELAY } from '../src/iphone-duo/diorama/memory-presentation.ts'
 import { progressToOpeningAngle } from '../src/iphone-duo/fold-choreography.ts'
 
 test('presentation starts on a closed front-facing photograph before revealing the scene', () => {
@@ -35,7 +35,7 @@ test('opening and camera move together continuously without overshooting or loop
     assert.ok(current.rotation.x <= previous.rotation.x && current.rotation.x >= -72)
     assert.ok(current.fold - previous.fold < .02)
     assert.ok(Math.abs(current.rotation.x - previous.rotation.x) < 1)
-    assert.ok(Math.abs(current.zoom - previous.zoom) < .005)
+    assert.ok(Math.abs(current.zoom - previous.zoom) < .01)
     previous = current
   }
   const middle = getMemoryPresentation(MEMORY_PRESENTATION_DURATION / 2)
@@ -48,7 +48,9 @@ test('the final view is fully open, front-facing and held indefinitely', () => {
   assert.equal(end.done, true)
   assert.equal(progressToOpeningAngle(end.fold), 180)
   assert.deepEqual(end.rotation, { x: -72, y: 0, z: 0 })
-  assert.equal(end.zoom, 1.18)
+  assert.equal(end.zoom, 1.55 * 1.2)
+  assert.equal(end.zoom, MEMORY_MAX_ZOOM)
+  assert.equal(MEMORY_ORBIT_DELAY, 1500)
   assert.deepEqual(getMemoryPresentation(MEMORY_PRESENTATION_DURATION + 60000), end)
 })
 

@@ -14,6 +14,6 @@ import "./memory-experience.css";
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <App initialView={new URLSearchParams(location.search).get('view') === 'wallpaper' ? 'wallpaper' : 'memory'} />
+    <App />
   </React.StrictMode>,
 );

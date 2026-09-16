@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { samplePhotoJourney, photoPlacement, createPhotoJourney } from '../src/iphone-duo/photo-journey.js';
+import { samplePhotoJourney, photoPlacement, createPhotoJourney, photoJourneyUIKey } from '../src/iphone-duo/photo-journey.js';
+
+test('continuous gallery travel only invalidates UI at control and caption boundaries', () => {
+  const keys = new Set(Array.from({ length: 501 }, (_, i) => photoJourneyUIKey(i / 100, 5)));
+  assert.ok(keys.size < 25, `five-photo travel should not cause 501 page updates: ${keys.size}`);
+  for (const [a, b] of [[.97, .99], [1, 1.01], [1.55, 1.57], [4.99, 5]]) {
+    assert.notEqual(photoJourneyUIKey(a, 5), photoJourneyUIKey(b, 5), 'controls still refresh at meaningful boundaries');
+  }
+});
 
 test('starts alone, shrinks to 77 percent, then locks framing', () => {
   const start = samplePhotoJourney(0, 4), arrived = samplePhotoJourney(1, 4);

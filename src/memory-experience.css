@@ -237,3 +237,55 @@
 @media (prefers-reduced-motion: reduce) { .memory-photo-ribbon, .memory-photo-dots button span { transition: none; } }
 
 .memory-original-frame.is-study img { width: 100%; height: 100%; object-fit: cover; }
+
+/* One heading travels from the centered entrance to the collection's left edge. */
+.memory-title-space { height: clamp(44px, 4.7vw, 82px); }
+.memory-collection-heading .memory-title-space { height: clamp(90px, 10.5vw, 177px); }
+.memory-travel-heading { position: absolute; inset: 0; pointer-events: none; }
+.memory-title-measure { position: absolute; left: 0; right: 0; visibility: hidden; }
+.memory-title-start { top: 31px; text-align: center; }
+.memory-title-type { font: 500 clamp(44px, 4.7vw, 82px)/1.02 'Cormorant Garamond', Georgia, serif; letter-spacing: -.045em; white-space: nowrap; }
+.memory-title-type > *, .memory-title-end [data-end] { display: inline-block; }
+.memory-title-end { top: 8px; }
+.memory-intro .memory-moving-title { position: absolute; inset: 0; margin: 0; max-width: none; }
+.memory-moving-title [data-word] { position: absolute; left: 0; top: 0; white-space: nowrap; transform-origin: 0 0; opacity: 0; will-change: transform; }
+@media (max-width: 1000px) {
+  .memory-title-type { font-size: 56px; }
+  .memory-title-start em { display: block; width: max-content; margin: auto; }
+  .memory-title-space { height: 114px; }
+}
+@media (max-width: 600px) {
+  .memory-title-type { font-size: clamp(40px, 10.7vw, 60px); }
+  .memory-title-space { height: clamp(82px, 21.8vw, 123px); }
+}
+
+/* Foldscape typography: literary narration, quiet functional labels. */
+.memory-experience { --memory-narrative-font: 'Cormorant Garamond', Georgia, serif; }
+.memory-intro .memory-description { font-family: var(--memory-narrative-font); font-size: clamp(20px, 1.45vw, 25px); font-weight: 500; line-height: 1.3; letter-spacing: .005em; color: #59666c; }
+.memory-collection-heading .memory-description { font-size: clamp(19px, 1.35vw, 23px); }
+.memory-eyebrow { letter-spacing: .22em; }
+.memory-status, .memory-collection-hint, .memory-scroll-cue { font-size: 11px; letter-spacing: .015em; }
+.memory-primary { font-weight: 500; letter-spacing: -.015em; }
+.memory-device-color > span { width: 19px; height: 19px; display: block; border-radius: 50%; border: 1px solid #697277; box-shadow: inset 0 0 0 3px #f4f3ef; }
+.memory-device-color .star-white { background: #d9d9d4; }
+.memory-device-color .night-sky { background: #354049; }
+.memory-view-wheel { height: 260px; width: 100%; }
+.memory-tools-dialog { max-width: 380px; }
+.memory-tools-dialog .memory-dialog-surface { padding-bottom: 16px; }
+.memory-view-wheel .option-wheel__item { font-family: Inter, sans-serif; letter-spacing: -.045em; }
+.memory-view-wheel .option-wheel:focus-visible { outline: 2px solid #963f36; outline-offset: -2px; border-radius: 12px; }
+.memory-finish-dialog { max-width: 380px; }
+@media (max-width: 600px) {
+  .memory-intro .memory-description { font-size: 20px; max-width: 300px; }
+  .memory-transport-actions { gap: 6px; }
+}
+
+.memory-view-wheel--outside { position: absolute; z-index: 6; right: 12px; top: 50%; transform: translateY(-50%); width: 228px; height: 280px; }
+@media (max-width: 1000px) {
+  .memory-view-wheel--outside { right: 2px; width: 170px; }
+  .memory-view-wheel--outside .option-wheel__item { font-size: 25px; }
+}
+@media (max-width: 600px) {
+  .memory-view-wheel--outside { top: auto; bottom: 178px; transform: none; height: 180px; width: 112px; right: 4px; }
+  .memory-view-wheel--outside .option-wheel__item { font-size: 17px; }
+}

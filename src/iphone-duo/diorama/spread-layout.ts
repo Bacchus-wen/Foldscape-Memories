@@ -1,6 +1,7 @@
 import { Box3, BufferGeometry, Float32BufferAttribute, Group, Matrix4, Mesh, PointLight, Vector3, type Object3D } from 'three'
 import { foldChoreography } from '../fold-choreography.ts'
 import { getPopUpState } from './pop-up-motion.ts'
+import { extendToWaterline, groundWaterline } from './waterline-contact.ts'
 
 export const PAGE_CENTER = .5 / .94
 export const SPREAD_LAYOUTS: Record<string,{angle:number;width:number;depth:number}> = {
@@ -12,8 +13,9 @@ export const SPREAD_LAYOUTS: Record<string,{angle:number;width:number;depth:numb
 }
 
 /** Bake each mesh and clip triangles exactly at the hinge, including interpolated UVs. */
-export function splitAtHinge(source: BufferGeometry, transform: Matrix4) {
-  const geometry=source.clone().applyMatrix4(transform)
+export function splitAtHinge(source: BufferGeometry, transform: Matrix4, waterContact=false) {
+  let geometry=source.clone().applyMatrix4(transform)
+  if(waterContact){const repaired=extendToWaterline(geometry);geometry.dispose();geometry=repaired}
   const names=Object.keys(geometry.attributes),position=geometry.attributes.position
   const offsets:Record<string,number>={},sizes:Record<string,number>={}
   let stride=0
@@ -67,6 +69,15 @@ export function createSpreadLayout(nodes:Object3D[],id:string) {
   const center=bounds.getCenter(new Vector3())
   const placement=new Matrix4().makeScale(scale,scale,scale)
   placement.setPosition(-center.x*scale,-center.y*scale,.016-bounds.min.z*scale)
+  const grounded=new Map<Mesh,BufferGeometry>()
+  if(id==='iceberg'){
+    const meshes:Mesh[]=[]
+    const vessel=new Set<Object3D>();nodes[0].traverse(object=>vessel.add(object))
+    authored.traverse(object=>{if(object instanceof Mesh)meshes.push(object)})
+    const baked=meshes.map(mesh=>mesh.geometry.clone().applyMatrix4(new Matrix4().multiplyMatrices(placement,mesh.matrixWorld)))
+    groundWaterline(baked,.004,meshes.map(mesh=>vessel.has(mesh)?.002:.024)).forEach((geometry,i)=>grounded.set(meshes[i],geometry))
+    baked.forEach(geometry=>geometry.dispose())
+  }
   const left=new Group(),right=new Group(),pages=[left,right],geometries:BufferGeometry[]=[],lights:PointLight[]=[]
   const layers={terrain:[new Group(),new Group()],cabins:[new Group(),new Group()],lighthouse:[new Group(),new Group()]}
   for(const pair of Object.values(layers))pair.forEach((group,i)=>{group.matrixAutoUpdate=false;pages[i].add(group)})
@@ -81,7 +92,7 @@ export function createSpreadLayout(nodes:Object3D[],id:string) {
         const light=object.clone();lights.push(light);anchor.add(light);layers[layer][side].add(anchor)
       }
       if(!(object instanceof Mesh))return
-      splitAtHinge(object.geometry,transform).forEach((geometry,side)=>{
+      splitAtHinge(grounded.get(object)??object.geometry,grounded.has(object)?new Matrix4():transform,id==='iceberg').forEach((geometry,side)=>{
         geometries.push(geometry)
         if(!geometry.attributes.position.count)return
         const mesh=new Mesh(geometry,object.material)
@@ -90,6 +101,7 @@ export function createSpreadLayout(nodes:Object3D[],id:string) {
       })
     })
   })
+  grounded.forEach(geometry=>geometry.dispose())
   for(const pair of Object.values(layers))pair.forEach((group,side)=>{
     const box=new Box3().setFromObject(group,true)
     group.userData.clearance=box.isEmpty()?0:Math.max(0,side?box.min.x+PAGE_CENTER:PAGE_CENTER-box.max.x)

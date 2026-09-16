@@ -21,8 +21,10 @@ test('two moving water planes avoid recursive reflections and release all GPU re
     getRenderTarget: () => renderTarget,
     setRenderTarget: target => { renderTarget = target },
     state: { buffers: { depth: { setMask() {} } } },
-    render() {
+    render(_scene, reflectionCamera) {
       reflectedPasses++
+      assert.equal(reflectionCamera.layers.isEnabled(0), false, 'water must not redraw the entire phone and photo gallery');
+      assert.equal(reflectionCamera.layers.isEnabled(1), true, 'architecture remains in the reflection');
       assert.ok([...left.children, ...right.children].every(surface => !surface.visible))
     },
   }

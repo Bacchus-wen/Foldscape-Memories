@@ -1,5 +1,5 @@
 import { Group, IcosahedronGeometry, InstancedMesh, Matrix4, MeshStandardMaterial, Quaternion, Vector3, type SkinnedMesh } from 'three'
-import { createCoastalWater } from './coastal-water.ts'
+import { createCoastalWater, MEMORY_REFLECTION_LAYER } from './coastal-water.ts'
 import { sceneEnvironment } from './scene-layout.ts'
 import { coastline, createScreenGround } from './screen-ground.ts'
 
@@ -27,7 +27,7 @@ export function createSceneEnvironment(left:Group,right:Group,id:string,resoluti
       p.set(x,y,kind==='ice'?.012:.014);s.set(r*1.7,r,r*.45)
       matrix.compose(p,q,s);mesh.setMatrixAt(i,matrix)
     }
-    mesh.castShadow=true;mesh.receiveShadow=true;group.add(mesh)
+    mesh.castShadow=true;mesh.receiveShadow=true;mesh.layers.enable(MEMORY_REFLECTION_LAYER);group.add(mesh)
   })
   let disposed=false
   return {kind,

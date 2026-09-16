@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createFrameBudget, scenePixelRatio } from '../src/iphone-duo/frame-budget.js';
 import { PerspectiveCamera, Vector3 } from 'three';
-import { frameSceneCamera } from '../src/iphone-duo/frame-camera.js';
+import { frameSceneCamera, sceneFrameAdjustment } from '../src/iphone-duo/frame-camera.js';
 
 test('full-page camera preserves photograph framing while allowing scenery above the old crop', () => {
   for (const [width, height, top, bottom] of [[1440, 900, 222, 160], [390, 800, 270, 248]]) {
@@ -45,4 +45,20 @@ test('scene render resolution stays within two million pixels without oversampli
     assert.ok(ratio > 0);
   }
   assert.equal(scenePixelRatio(390, 500, 1), 1);
+});
+
+test('unfolded framing scales the scene to 90% and moves it down exactly 20 CSS pixels', () => {
+  const camera = new PerspectiveCamera(30, 1, .1, 100);
+  camera.position.z = 36; camera.updateMatrixWorld();
+  frameSceneCamera(camera, 1440, 900, 222, 160);
+  const origin = new Vector3().project(camera);
+  const edge = new Vector3(4, 0, 0).project(camera);
+  const frame = sceneFrameAdjustment(1);
+  camera.zoom *= frame.scale; camera.view.offsetY -= frame.offsetY; camera.updateProjectionMatrix();
+  const moved = new Vector3().project(camera);
+  const scaled = new Vector3(4, 0, 0).project(camera);
+  assert.ok(Math.abs((origin.y - moved.y) * 450 - 20) < 1e-8);
+  assert.ok(Math.abs((scaled.x - moved.x) / (edge.x - origin.x) - .9) < 1e-8);
+  assert.deepEqual(sceneFrameAdjustment(0), { scale: 1, offsetY: 0 });
+  assert.deepEqual(sceneFrameAdjustment(.5), { scale: .95, offsetY: 10 });
 });

@@ -72,3 +72,25 @@ test('photographs become browsable before scene preparation finishes', async () 
     assert.equal(states.at(-1).prepared, true);
   } finally { release(); morph?.dispose(); TextureLoader.prototype.loadAsync = original; }
 });
+
+test('leaving during preparation stops callbacks but keeps shader resources alive until compilation ends', async () => {
+  const original = TextureLoader.prototype.loadAsync;
+  let disposed = 0, release, morph;
+  TextureLoader.prototype.loadAsync = async () => {
+    const texture = new Texture({ width: 120, height: 80 });
+    texture.addEventListener('dispose', () => disposed++); return texture;
+  };
+  const warming = new Promise(resolve => { release = resolve; }), states = [];
+  try {
+    morph = createCoverMorph({ material: { uniforms: createMorphUniforms() },
+      photos: [0, 1].map(index => ({ image: `${index}.jpg`, crop: [0, 0, 1, 1] })),
+      scene: new Scene(), element: { dataset: {} }, draw() {}, onState: state => states.push(state), warmup: () => warming });
+    await sleep(0);
+    const count = states.length;
+    morph.dispose(warming);
+    assert.equal(disposed, 0, 'compileAsync may still read these materials and textures');
+    release(); await sleep(0);
+    assert.equal(disposed, 2);
+    assert.equal(states.length, count, 'unmounted experience must not publish a late ready state');
+  } finally { release(); TextureLoader.prototype.loadAsync = original; }
+});

@@ -12,7 +12,7 @@ gsap.registerPlugin(Observer);
 export default function MemoryPhotoRibbon({ journey, visible, disabled }) {
   const gesture = useRef(null), start = useRef(0);
   const { position, frame } = journey;
-  const press = useEffectEvent(() => { journey.stop(); start.current = position; });
+  const press = useEffectEvent(() => { journey.stop(); start.current = journey.position; });
   const move = useEffectEvent(observer => {
     const delta = observer.axis === 'y' ? observer.startY - observer.y : observer.startX - observer.x;
     journey.move(start.current + delta / Math.max(220, Math.min(600, gesture.current.clientWidth * .7)));
