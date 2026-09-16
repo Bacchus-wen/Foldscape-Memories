@@ -1,0 +1,28 @@
+# Dependencies and build output
+node_modules/
+dist/
+.pnpm-store/
+.vite/
+coverage/
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+*.tsbuildinfo
+
+# Local design notes and generated comparisons
+AGENTS.md
+design-qa*
+implementation-*.jpg
+qa/*
+!qa/screen-gpu-check.html
+!qa/fold-focus-2026-09-12.md
+
+# Local asset-generation sessions and debug captures
+.tripo/
+.superpowers/
+asset-workflow/
+public/qa/

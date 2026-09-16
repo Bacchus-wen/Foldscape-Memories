@@ -1,0 +1,71 @@
+body:has(.memory-app) { overflow:auto; background:#f5f6f6; }
+.memory-app { --ink:#26333b; --muted:#839099; --paper:#f5f6f6; color:var(--ink); background:var(--paper); color-scheme:light; min-height:100svh; font-family:Inter,"PingFang SC","Microsoft YaHei",sans-serif; overflow:hidden; }
+.memory-app button,.memory-app a { -webkit-tap-highlight-color:transparent; }
+.memory-app button { cursor:pointer; }
+.memory-app button:focus-visible,.memory-app a:focus-visible,.memory-app input:focus-visible { outline:2px solid #5f8398; outline-offset:5px; }
+.memory-header { height:90px; display:flex; align-items:center; justify-content:space-between; margin:0 4%; border-bottom:1px solid #dce1e3; }
+.memory-brand { display:flex; align-items:center; gap:12px; color:var(--ink); text-decoration:none; }
+.memory-brand strong { font-size:19px; font-weight:600; letter-spacing:-.9px; }
+.memory-brand strong span { color:#aeb7ba; font-weight:400; margin:0 4px; }
+.book-mark { display:flex; gap:3px; transform:rotate(-8deg); }
+.book-mark i { width:11px; height:23px; border:1.5px solid #34444c; border-radius:3px; transform:skewY(-10deg); }
+.book-mark i+ i { transform:skewY(10deg); }
+.memory-edition { font-size:9px; letter-spacing:2px; color:#8c969c; }
+.original-link { font-size:11px; color:#64747b; text-decoration:none; }
+.original-link span { padding-left:8px; }
+.memory-layout { display:grid; grid-template-columns:290px minmax(0,1fr); gap:24px; min-height:calc(100svh - 140px); max-width:1520px; margin:auto; padding:0 4%; }
+.memory-story { padding:64px 0 28px; position:relative; z-index:1; }
+.story-overline { font-size:9px; letter-spacing:1.7px; color:#72858c; display:flex; align-items:center; gap:9px; }
+.story-overline>span { display:inline-block; width:17px; height:1px; background:#8ca0a8; }
+.memory-story h1 { font-size:36px; font-weight:500; letter-spacing:-1.5px; line-height:1.55; margin:25px 0 18px; }
+.story-intro { font-size:12px; line-height:1.95; color:#879198; margin:0; }
+.memory-photo { width:222px; margin:36px 0 0; }
+.photo-crop { aspect-ratio:1.5; overflow:hidden; border-radius:3px; background:#9baccb; }
+.photo-crop img { width:100%; height:auto; display:block; }
+.memory-photo figcaption { display:flex; justify-content:space-between; gap:14px; font-size:9px; color:#869398; margin-top:12px; letter-spacing:.3px; }
+.story-open { display:flex; align-items:center; justify-content:space-between; width:222px; padding:17px 0; margin-top:21px; border:0; border-top:1px solid #d7dfe1; border-bottom:1px solid #d7dfe1; background:transparent; font-size:12px; text-align:left; color:#3c555f; }
+.story-open>span { font-size:20px; font-weight:300; }
+.story-open:hover { color:#a84134; }
+.story-note { margin-top:30px; color:#95a0a5; }
+.story-note>span { font-size:9px; letter-spacing:2.2px; }
+.story-note p { font-size:10px; margin-top:9px; }
+.memory-stage { min-height:660px; position:relative; }
+.stage-label { position:absolute; z-index:2; top:31px; left:26px; right:0; font-size:8px; letter-spacing:1.8px; color:#91a0a5; display:flex; align-items:center; gap:7px; }
+.stage-dot { height:4px; width:4px; background:#7a9189; border-radius:50%; }
+.stage-number { margin-left:auto; font-variant-numeric:tabular-nums; font-size:11px; color:#b0babe; letter-spacing:0; }
+.memory-device-area { position:absolute; inset:30px -30px 154px -20px; }
+.memory-app .duo-device { position:absolute; inset:0; height:100%; width:100%; }
+.memory-app .duo-device-target { inset:5%; border-radius:0; }
+.memory-app .duo-status { background:#f4f4ef; color:#526269; }
+.memory-loading,.memory-error { position:absolute; top:40%; width:100%; text-align:center; font-size:12px; color:#829399; }
+.stage-caption { position:absolute; left:0; right:0; bottom:142px; display:flex; flex-direction:column; align-items:center; gap:10px; pointer-events:none; }
+.stage-caption>span { font-size:11px; letter-spacing:2px; color:#5f747d; }
+.stage-caption small { font-size:9px; color:#9da7ac; }
+.memory-controls { position:absolute; bottom:27px; width:min(440px,95%); left:50%; transform:translateX(-50%); background:#ffffffa6; border:1px solid #fff; border-radius:17px; padding:12px 17px 11px; box-shadow:0 9px 35px #344b5810; backdrop-filter:blur(16px); }
+.control-top { display:flex; justify-content:space-between; align-items:center; padding-bottom:10px; border-bottom:1px solid #e9edee; }
+.angle-presets { display:flex; gap:4px; }
+.angle-presets button { font-size:10px; color:#7e8b91; background:transparent; border:0; border-radius:7px; padding:8px 12px; display:flex; align-items:center; gap:7px; }
+.angle-presets button>span { font-size:15px; line-height:12px; }
+.angle-presets button[aria-pressed=true] { background:#34444d; color:#fff; }
+.angle-presets button:hover:not([aria-pressed=true]) { background:#eaf0f1; }
+.finish-options { display:flex; gap:11px; align-items:center; padding-right:4px; }
+.finish-options button { width:14px; height:14px; padding:0; border:1px solid #c7cdcf; border-radius:50%; }
+.finish-white { background:#eceee9; }
+.finish-dark { background:#253b4d; }
+.finish-options button[aria-pressed=true] { outline:1px solid #9aa8ae; outline-offset:3px; }
+.control-bottom { display:flex; align-items:center; gap:13px; padding-top:9px; height:34px; }
+.play-toggle,.reset-view { padding:0; border:0; background:none; color:#72858e; width:24px; height:26px; font-size:12px; }
+.play-toggle:disabled { opacity:.3; cursor:default; }
+.reset-view { font-size:21px; }
+.control-bottom input { flex:1; width:70px; appearance:none; height:3px; background:linear-gradient(to right,#6f858e var(--progress),#dce3e5 var(--progress)); border-radius:2px; cursor:ew-resize; }
+.control-bottom input::-webkit-slider-thumb { appearance:none; width:9px; height:17px; background:#4d6571; border:2px solid white; border-radius:5px; box-shadow:0 1px 5px #172e3722; }
+.control-bottom input::-moz-range-thumb { width:7px; height:15px; background:#4d6571; border:2px solid white; border-radius:5px; }
+.control-bottom output { width:38px; font-size:11px; font-variant-numeric:tabular-nums; color:#647a85; text-align:right; }
+.control-bottom output>span { color:#a2b0b7; margin-left:3px; }
+.memory-footer { height:50px; padding:0 4%; display:flex; align-items:center; justify-content:space-between; font-size:8px; letter-spacing:1.5px; color:#a7b1b5; }
+.memory-footer span+span { letter-spacing:1px; }
+@media(min-width:1500px) { .memory-story { padding-top:100px; } .memory-story h1 { font-size:42px; } .memory-device-area { inset:20px -40px 120px -40px; } }
+@media(max-height:780px) and (min-width:801px) { .memory-header { height:72px; } .memory-layout { min-height:calc(100svh - 112px); grid-template-columns:260px 1fr; } .memory-story { padding-top:33px; } .memory-story h1 { font-size:32px; margin-top:18px; } .memory-photo { margin-top:22px; width:200px; } .story-open { width:200px; margin-top:16px; padding:12px 0; } .story-note { margin-top:20px; } .memory-stage { min-height:570px; } .memory-footer { height:40px; } }
+@media(max-width:800px) { .memory-header { height:72px; margin:0 5%; } .memory-edition { display:none; } .memory-layout { display:block; padding:0 5%; } .memory-story { padding:27px 0 0; } .memory-story h1 { font-size:28px; line-height:1.5; margin:13px 0 0; } .memory-story h1 br { display:none; } .story-intro { margin-top:9px; font-size:11px; } .story-intro br { display:none; } .memory-photo,.story-open,.story-note { display:none; } .memory-stage { min-height:560px; height:calc(100svh - 270px); } .stage-label { top:19px; left:0; right:0; } .memory-device-area { inset:30px -16px 153px; } .memory-controls { bottom:17px; width:min(440px,100%); padding:10px 12px; } .stage-caption { bottom:137px; } .memory-footer { height:35px; padding:0 5%; } }
+@media(max-width:440px) { .memory-header { height:62px; } .memory-brand strong { font-size:16px; } .memory-story h1 { font-size:25px; letter-spacing:-1px; } .memory-stage { min-height:495px; height:calc(100svh - 236px); } .memory-device-area { inset:20px -23px 155px; } .memory-footer span+span { display:none; } .angle-presets button { padding:8px 10px; } }
+@media(prefers-reduced-motion:reduce) { .memory-app * { scroll-behavior:auto; } }

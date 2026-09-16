@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Fold progress regression</title>
+<div id="root"></div>
+<script type="module">
+  import React, { useState } from 'react';
+  import { createRoot } from 'react-dom/client';
+  import { useMotionValueEvent } from 'motion/react';
+  import { FoldablePhone, FoldScrubber, useFoldablePhone } from '/src/iphone-duo/FoldablePhone.tsx';
+  const h = React.createElement;
+  function Readout() {
+    const { progress } = useFoldablePhone();
+    const [value, setValue] = useState(progress.get());
+    useMotionValueEvent(progress, 'change', setValue);
+    return h('p', null, `Rendered fold: ${value.toFixed(2)}`);
+  }
+  function Fixture() {
+    const [value, setValue] = useState(0);
+    const [reports, setReports] = useState(0);
+    return h('main', null,
+      h('h1', null, 'Fold progress regression'),
+      h('p', null, 'External updates must render without reporting a new user change. The slider must still report user changes.'),
+      h('button', { onClick: () => setValue(.85) }, 'Set external fold'),
+      h('button', { onClick: () => {
+        let frame = 0;
+        const tick = () => {
+          setValue(++frame / 120);
+          if (frame < 120) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      } }, 'Animate external fold'),
+      h('p', { role: 'status' }, `User changes: ${reports}`),
+      h(FoldablePhone, { value, onValueChange: next => { setValue(next); setReports(count => count + 1); } },
+        h(FoldScrubber, { 'aria-label': 'Manual fold' }), h(Readout)));
+  }
+  createRoot(document.getElementById('root')).render(h(React.StrictMode, null, h(Fixture)));
+</script>
+</html>

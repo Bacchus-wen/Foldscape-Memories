@@ -1,0 +1,40 @@
+{
+  "width": 800,
+  "height": 1120,
+  "elements": [
+    { "type": "image", "id": "weather", "name": "San Francisco weather", "src": "/screen-content/widgets/weather.png", "x": 38, "y": 124, "width": 273, "height": 260, "radius": 38 },
+    { "type": "image", "id": "map", "name": "Channel Street map", "src": "/screen-content/widgets/map.png", "x": 344, "y": 124, "width": 275, "height": 260, "radius": 38 },
+    { "type": "image", "id": "status", "name": "Camera status control", "src": "/screen-content/ui/status-bar.svg", "x": 671.5, "y": 132, "width": 77, "height": 123 },
+
+    { "type": "image", "id": "facetime", "name": "FaceTime", "src": "/screen-content/icons/facetime.svg", "x": 38, "y": 425, "width": 118, "height": 118, "radius": 27 },
+    { "type": "image", "id": "calendar", "name": "Calendar", "src": "/screen-content/icons/calendar.svg", "x": 191, "y": 425, "width": 118, "height": 118, "radius": 27 },
+    { "type": "image", "id": "photos", "name": "Photos", "src": "/screen-content/icons/photos.svg", "x": 344, "y": 425, "width": 118, "height": 118, "radius": 27 },
+    { "type": "image", "id": "camera", "name": "Camera", "src": "/screen-content/icons/camera.svg", "x": 497, "y": 425, "width": 118, "height": 118, "radius": 27 },
+
+    { "type": "image", "id": "mail", "name": "Mail", "src": "/screen-content/icons/mail.svg", "x": 38, "y": 576, "width": 118, "height": 118, "radius": 27 },
+    { "type": "image", "id": "notes", "name": "Notes", "src": "/screen-content/icons/notes.svg", "x": 191, "y": 576, "width": 118, "height": 118, "radius": 27 },
+    { "type": "image", "id": "clock", "name": "Clock", "src": "/screen-content/icons/clock.svg", "x": 344, "y": 576, "width": 118, "height": 118, "radius": 27 },
+    { "type": "image", "id": "maps", "name": "Maps", "src": "/screen-content/icons/apple-maps.svg", "x": 497, "y": 576, "width": 118, "height": 118, "radius": 27 },
+
+    { "type": "image", "id": "tv", "name": "Apple TV", "src": "/screen-content/icons/apple-tv.svg", "x": 38, "y": 729, "width": 118, "height": 118, "radius": 27 },
+    { "type": "image", "id": "news", "name": "News", "src": "/screen-content/icons/news.svg", "x": 191, "y": 729, "width": 118, "height": 118, "radius": 27 },
+    { "type": "image", "id": "app-store", "name": "App Store", "src": "/screen-content/icons/app-store.svg", "x": 344, "y": 729, "width": 118, "height": 118, "radius": 27 },
+    { "type": "image", "id": "rocket", "name": "Rocket", "src": "/screen-content/icons/rocket.svg", "x": 497, "y": 729, "width": 118, "height": 118, "radius": 27 },
+
+    { "type": "image", "id": "health", "name": "Health", "src": "/screen-content/icons/apple-health.svg", "x": 38, "y": 878, "width": 118, "height": 118, "radius": 27 },
+    { "type": "image", "id": "wallet", "name": "Wallet", "src": "/screen-content/icons/apple-wallet.svg", "x": 191, "y": 878, "width": 118, "height": 118, "radius": 27 },
+    { "type": "image", "id": "siri", "name": "Siri", "src": "/screen-content/icons/siri.svg", "x": 344, "y": 878, "width": 118, "height": 118, "radius": 27 },
+    { "type": "image", "id": "settings", "name": "Settings", "src": "/screen-content/icons/settings.svg", "x": 497, "y": 878, "width": 118, "height": 118, "radius": 27 },
+
+    { "type": "glass", "id": "dock-glass", "x": 654, "y": 412, "width": 112, "height": 410, "radius": 28 },
+    { "type": "image", "id": "phone", "name": "Phone", "src": "/screen-content/icons/phone.svg", "x": 666, "y": 428, "width": 88, "height": 88, "radius": 20 },
+    { "type": "image", "id": "safari", "name": "Safari", "src": "/screen-content/icons/safari.svg", "x": 666, "y": 526, "width": 88, "height": 88, "radius": 20 },
+    { "type": "image", "id": "messages", "name": "Messages", "src": "/screen-content/icons/messages.svg", "x": 666, "y": 624, "width": 88, "height": 88, "radius": 20 },
+    { "type": "image", "id": "music", "name": "Music", "src": "/screen-content/icons/apple-music.svg", "x": 666, "y": 722, "width": 88, "height": 88, "radius": 20 },
+
+    { "type": "dot", "id": "page-current", "x": 309, "y": 1069, "radius": 7, "color": "rgba(255,255,255,0.95)" },
+    { "type": "dot", "id": "page-next", "x": 341, "y": 1069, "radius": 7, "color": "rgba(255,255,255,0.48)" },
+    { "type": "glass", "id": "search-glass", "x": 671, "y": 1011, "width": 78, "height": 78, "radius": 39 },
+    { "type": "image", "id": "search", "name": "Search", "src": "/screen-content/ui/search-symbol.svg", "x": 691, "y": 1031, "width": 38, "height": 38 }
+  ]
+}
