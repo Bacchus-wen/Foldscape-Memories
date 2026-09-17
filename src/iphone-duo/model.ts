@@ -33,8 +33,12 @@ export async function loadPhone(url: string) {
     'XhJqNmvXbohGMop',
   ]
   const cameraRingMaterialNames = ['jqlebwNqkTyrcyd', 'OwqobJiNTlvAFyj']
+  // The logo has a base and a clearcoat overlay. The overlay shares its
+  // material with the camera island, so hide these meshes rather than that material.
+  const rearLogoMeshNames = ['LDcHeENovRXWVxD', 'ZEAwVPmUDdMbViq']
   body.traverse(object => {
     if (!(object instanceof Mesh)) return
+    if (rearLogoMeshNames.includes(object.name)) object.visible = false
     let originals = Array.isArray(object.material) ? object.material : [object.material]
     const isInnerScreen = object.name === 'skeleton_0_3_screenTexture_geo' || originals.some(material => material.name === 'inner-screen')
     const isCoverScreen = object.name === 'skeleton_0_7_outerDisplayScreenTexture_geo' || originals.some(material => material.name === 'cover-screen')

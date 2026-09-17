@@ -1,9 +1,11 @@
 import { Group, Matrix4, Vector3, type Object3D, type SkinnedMesh } from 'three'
 
-export function createPageAnchors(screen: SkinnedMesh, host: Object3D) {
+export function createPageAnchors(screen: SkinnedMesh, host: Object3D, flatScene = false) {
   const uv = screen.geometry.attributes.uv
   const inverseHost = new Matrix4()
   const world = new Matrix4()
+  const flatOffset = new Matrix4().makeTranslation(-1 / .94, 0, 0)
+  let flatBasis: Matrix4 | undefined
   const points = [new Vector3(), new Vector3(), new Vector3()]
   const delta1 = new Vector3(), delta2 = new Vector3()
   const uAxis = new Vector3(), vAxis = new Vector3()
@@ -44,5 +46,16 @@ export function createPageAnchors(screen: SkinnedMesh, host: Object3D) {
       group.updateMatrixWorld(true)
     }
   }
-  return { left: sides[0].group, right: sides[1].group, update, dispose() { sides.forEach(({group})=>group.removeFromParent()) } }
+  const updateAnchors = () => {
+    update()
+    if (flatScene) {
+      // Keep the complete scene on the stationary right screen's plane.
+      flatBasis ??= sides[1].group.matrix.clone()
+      sides[1].group.matrix.copy(flatBasis)
+      sides[1].group.updateMatrixWorld(true)
+      sides[0].group.matrix.copy(flatBasis).multiply(flatOffset)
+      sides[0].group.updateMatrixWorld(true)
+    }
+  }
+  return { left: sides[0].group, right: sides[1].group, update: updateAnchors, dispose() { sides.forEach(({group})=>group.removeFromParent()) } }
 }

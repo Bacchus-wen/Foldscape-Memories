@@ -5,6 +5,7 @@ import { Box3, BoxGeometry, Group, Mesh, MeshStandardMaterial, MeshPhysicalMater
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { prepareLighthouseAsset } from '../src/iphone-duo/diorama/lighthouse-asset.ts'
 import { createPageAnchors } from '../src/iphone-duo/diorama/page-anchors.ts'
+import { createScreenPortal } from '../src/iphone-duo/diorama/screen-portal.ts'
 import { loadPhoneFixture } from './helpers/phone-fixture.mjs'
 
 test('GLB keeps authored page positions and relative scale through the Y-up conversion', () => {
@@ -65,7 +66,7 @@ test('small scene glazing stays transparent without requesting full-scene transm
   asset.dispose()
 })
 
-for (const sceneFile of ['lighthouse/lighthouse-memory-v2.glb', 'iceberg/iceberg-memory.glb', 'coastal-house/coastal-house-memory.glb', 'santorini/santorini-memory.glb', 'osaka-castle/osaka-castle-memory.glb']) test(`delivered scene ${sceneFile} meets the phone hinge and follows folding`, async () => {
+for (const sceneFile of ['lighthouse/lighthouse-memory-v2.glb', 'iceberg/iceberg-memory.glb', 'coastal-house/coastal-house-memory.glb', 'santorini/santorini-memory.glb', 'osaka-castle/osaka-castle-memory.glb']) test(`delivered scene ${sceneFile} uses stationary placement and screen occlusion through opening and rewind`, async () => {
   const bytes = await readFile(new URL(`../public/scenes/${sceneFile}`, import.meta.url))
   const jsonLength = bytes.readUInt32LE(12)
   const data = JSON.parse(bytes.subarray(20, 20 + jsonLength).toString())
@@ -78,7 +79,8 @@ for (const sceneFile of ['lighthouse/lighthouse-memory-v2.glb', 'iceberg/iceberg
   const gltf = await new GLTFLoader().parseAsync(JSON.stringify(data), '')
   const asset = prepareLighthouseAsset(gltf.scene, sceneFile.split('/')[0])
   const { host, screen, fold } = await loadPhoneFixture()
-  const anchors = createPageAnchors(screen, host)
+  const screens = createPageAnchors(screen, host)
+  const anchors = createPageAnchors(screen, host, true)
   anchors.left.add(asset.left); anchors.right.add(asset.right)
   anchors.update()
   asset.animate(1)
@@ -102,11 +104,55 @@ for (const sceneFile of ['lighthouse/lighthouse-memory-v2.glb', 'iceberg/iceberg
   assert.ok(combined.max.x-combined.min.x>1.4, `large composition spans the full display: ${combined.max.x-combined.min.x}`)
   assert.ok(combined.max.x<=1.01&&combined.min.x>=-1.01, 'keeps the outer bezel clear')
   assert.ok(combined.max.y<=.701&&combined.min.y>=-.701)
-  for(const p of [.15,.35,.55,.75,.96,1,.55,0]) {
-    fold(p);anchors.update();asset.animate(p);host.updateMatrixWorld(true)
-    assert.ok(asset.left.matrixWorld.elements.every(Number.isFinite))
-    assert.ok(asset.right.matrixWorld.elements.every(Number.isFinite))
+  screens.update()
+  const portal = createScreenPortal([asset.left,asset.right],[anchors.left,anchors.right],screens.left)
+  const fixed = [asset.left.matrixWorld.clone(),asset.right.matrixWorld.clone()]
+  const seen = new Map()
+  for(const p of [0,.15,.35,.55,.65,.75,.96,1,.75,.65,.55,.35,.15,0]) {
+    fold(p);screens.update();anchors.update();asset.animate(1);host.updateMatrixWorld(true);portal.update(p)
+    // Both halves share the actual lid boundary at every partial angle.
+    const leftPlanes=localPages[0][0].material.clippingPlanes
+    const rightPlanes=localPages[1][0].material.clippingPlanes
+    assert.equal(leftPlanes[0],rightPlanes[0],'both halves share the same released space')
+    const capRoot=host.getObjectByName('screen-portal-caps')
+    assert.ok(capRoot,'every delivered scene receives cut faces')
+    if(capRoot.visible){
+      const envelope=left.clone().union(right).expandByScalar(1e-4)
+      capRoot.children.forEach((face,index)=>{
+        const positions=face.geometry.attributes.position
+        for(let i=0;i<face.geometry.drawRange.count;i++){
+          const point=new Vector3().fromBufferAttribute(positions,i).applyMatrix4(host.matrixWorld)
+          assert.ok(envelope.containsPoint(point),'cut faces remain inside the delivered scene bounds')
+          assert.ok(Math.abs(leftPlanes[index].distanceToPoint(point))<1e-4,'cut face lies on its moving reveal plane')
+        }
+      })
+    }
+    for (const z of [0,.2,.5]) {
+      const leftSeam=new Vector3(.5/.94,0,z).applyMatrix4(asset.left.matrixWorld)
+      const rightSeam=new Vector3(-.5/.94,0,z).applyMatrix4(asset.right.matrixWorld)
+      assert.ok(leftSeam.distanceTo(rightSeam)<1e-5,'both halves meet at the same physical seam')
+    }
+    const signature=[]
+    localPages.forEach((meshes,side)=>{
+      const page=side?asset.right:asset.left
+      page.matrixWorld.elements.forEach((v,i)=>assert.ok(Math.abs(v-fixed[side].elements[i])<1e-5,'scene does not fold with the lid'))
+      for(const mesh of meshes){
+        const planes=mesh.material.clippingPlanes
+        assert.equal(planes.length,1,'every mesh uses only the actual moving lid')
+        assert.equal(mesh.material.clipShadows,true)
+        const positions=mesh.geometry.attributes.position
+        for(let i=0;i<positions.count;i+=Math.max(1,Math.floor(positions.count/12))){
+          const point=new Vector3().fromBufferAttribute(positions,i).applyMatrix4(mesh.matrixWorld)
+          const visible=page.visible&&planes.every(plane=>plane.distanceToPoint(point)>=-1e-5)
+          if(p===0)assert.equal(visible,false,'closed device hides every sampled vertex')
+          if(p===1&&point.z>.30)assert.equal(visible,true,'open device does not clip scene above the screen')
+          signature.push(visible)
+        }
+      }
+    })
+    if(seen.has(p))assert.deepEqual(signature,seen.get(p),'rewind uses the exact same reveal boundaries')
+    else seen.set(p,signature)
   }
-  asset.dispose(); anchors.dispose()
+  portal.dispose();asset.dispose(); anchors.dispose();screens.dispose()
 })
 

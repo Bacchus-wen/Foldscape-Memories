@@ -27,3 +27,20 @@ test('dry environments contain no reflective ocean and every surface is hidden w
     assert.equal(left.children.length+right.children.length,0)
   }
 })
+
+test('house shoreline details retain full height throughout the reveal', () => {
+  const left=new Group(),right=new Group()
+  const environment=createSceneEnvironment(left,right,'coastal-house',32)
+  const stationary=[new Group(),new Group()]
+  environment.details.forEach((group,side)=>stationary[side].add(group))
+  for(const p of [0,.08,.3,.6,1,.3,0]) {
+    environment.update(p)
+    environment.details.forEach((group,side)=>{
+      assert.equal(group.parent,stationary[side])
+      assert.deepEqual(group.scale.toArray(),[1,1,1])
+      assert.equal(group.visible,p>.014)
+    })
+  }
+  environment.dispose()
+  assert.ok(stationary.every(group=>group.children.length===0))
+})

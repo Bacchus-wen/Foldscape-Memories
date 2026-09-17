@@ -1,6 +1,6 @@
 import { useEffect, useEffectEvent, useRef, useState, type ComponentProps } from 'react'
 import { useMotionValueEvent, useReducedMotion, type MotionValue } from 'motion/react'
-import { ACESFilmicToneMapping, AmbientLight, BoxGeometry, DirectionalLight, Mesh, MeshBasicMaterial, PerspectiveCamera, PMREMGenerator, Scene, SRGBColorSpace, VideoTexture, LinearMipmapLinearFilter, TextureLoader, Vector2, WebGLRenderer, PCFShadowMap, type Texture, type SkinnedMesh } from 'three'
+import { ACESFilmicToneMapping, AmbientLight, BoxGeometry, DirectionalLight, Mesh, MeshBasicMaterial, PerspectiveCamera, Raycaster, PMREMGenerator, Scene, SRGBColorSpace, VideoTexture, LinearMipmapLinearFilter, TextureLoader, Vector2, WebGLRenderer, PCFShadowMap, type Texture, type SkinnedMesh } from 'three'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { loadPhone } from './model'
 import { createCoverMorph } from './cover-morph'
@@ -20,7 +20,7 @@ type PhoneModel = Awaited<ReturnType<typeof loadPhone>>
 type Surface = { scene: Scene; model: PhoneModel; renderer: WebGLRenderer; camera: PerspectiveCamera; draw: () => void; warmup: () => Promise<void>; finish?: string; diorama?: ReturnType<typeof createLighthouse> }
 type DeviceRotation = { x: number; y: number; z: number }
 type DragState = { mode: 'fold'; x: number; value: number; moved: boolean } | { mode: 'rotate'; x: number; y: number; rotation: DeviceRotation; moved: boolean; lastX: number; lastY: number; lastTime: number; vx: number; vy: number }
-export type PhoneDeviceProps = ComponentProps<'div'> & { homeScale?: number; homeInspection?: MotionValue<number>; homeWheel?: boolean; browsePhotos?: boolean; coverPhotoPosition?: MotionValue<number>; coverPhotoActive?: boolean; coverPhotoRetraction?: number; onCoverPhotoState?: (state: { ready: boolean; prepared: boolean; index: number; target: number; busy: boolean; error: string }) => void; diorama?: boolean; memorySceneId?: string; onSceneReadyChange?: (ready: boolean) => void; sceneMotion?: boolean; interactionEpoch?: number; onReadyChange?: (ready: boolean) => void; modelSrc: string; screenSrc: string; videoSrc?: string; videoPlaying?: boolean; wallpaperMode?: string; screenOrientation?: number; screenLayoutVariant?: 'default' | 'seated'; foldEffects?: boolean; foldProjection?: boolean; innerFocusFlip?: boolean; coverSrc?: string; rotation?: number; rotationX?: number; rotationZ?: number; exposure?: number; blur?: number; parallax?: number; screenOverlaySrc?: string; coverOverlaySrc?: string; revealSrc?: string; depthSrc?: string; depthEnabled?: boolean; depthStrength?: number; finish?: 'night-sky' | 'star-white'; dragToRotate?: boolean; sceneOrbit?: boolean; onRotationStart?: () => void; onRotationEnd?: () => void; onRotationChange?: (rotation: DeviceRotation) => void; zoom?: number; zoomScale?: number; onZoomChange?: (zoom: number) => void; language?: 'zh' | 'en' }
+export type PhoneDeviceProps = ComponentProps<'div'> & { onCoverOpen?: () => void; homeScale?: number; homeInspection?: MotionValue<number>; homeWheel?: boolean; browsePhotos?: boolean; coverPhotoPosition?: MotionValue<number>; coverPhotoActive?: boolean; coverPhotoRetraction?: number; onCoverPhotoState?: (state: { ready: boolean; prepared: boolean; index: number; target: number; busy: boolean; error: string }) => void; diorama?: boolean; memorySceneId?: string; onSceneReadyChange?: (ready: boolean) => void; sceneMotion?: boolean; interactionEpoch?: number; onReadyChange?: (ready: boolean) => void; modelSrc: string; screenSrc: string; videoSrc?: string; videoPlaying?: boolean; wallpaperMode?: string; screenOrientation?: number; screenLayoutVariant?: 'default' | 'seated'; foldEffects?: boolean; foldProjection?: boolean; innerFocusFlip?: boolean; coverSrc?: string; rotation?: number; rotationX?: number; rotationZ?: number; exposure?: number; blur?: number; parallax?: number; screenOverlaySrc?: string; coverOverlaySrc?: string; revealSrc?: string; depthSrc?: string; depthEnabled?: boolean; depthStrength?: number; finish?: 'night-sky' | 'star-white'; dragToRotate?: boolean; sceneOrbit?: boolean; onRotationStart?: () => void; onRotationEnd?: () => void; onRotationChange?: (rotation: DeviceRotation) => void; zoom?: number; zoomScale?: number; onZoomChange?: (zoom: number) => void; language?: 'zh' | 'en' }
 
 const DEVICE_STATUS_COPY = {
   zh: {
@@ -57,7 +57,7 @@ export function PhoneDevice(props: PhoneDeviceProps) {
   return <PhoneDeviceSurface key={props.modelSrc} {...props} />
 }
 
-function PhoneDeviceSurface({ homeScale = 1, homeInspection, homeWheel = false, browsePhotos = false, coverPhotoPosition, coverPhotoActive = true, coverPhotoRetraction = 0, onCoverPhotoState, diorama = false, memorySceneId = 'lighthouse', onSceneReadyChange, sceneMotion = true, interactionEpoch = 0, onReadyChange, modelSrc, screenSrc, coverSrc = screenSrc, videoSrc, videoPlaying = true, wallpaperMode = "full", screenOrientation = 0, screenLayoutVariant = 'default', foldEffects = true, foldProjection = true, innerFocusFlip = false, screenOverlaySrc, coverOverlaySrc, revealSrc, depthSrc, depthEnabled = true, depthStrength = 0.3, finish = 'star-white', rotation = -6, rotationX = 0, rotationZ = 0, dragToRotate = false, sceneOrbit = false, onRotationStart, onRotationEnd, onRotationChange, zoom = 0.991875, zoomScale = 1, onZoomChange, exposure = 1.2, blur = 28, parallax = 1, language = 'en', className = '', ...props }: PhoneDeviceProps) {
+function PhoneDeviceSurface({ onCoverOpen, homeScale = 1, homeInspection, homeWheel = false, browsePhotos = false, coverPhotoPosition, coverPhotoActive = true, coverPhotoRetraction = 0, onCoverPhotoState, diorama = false, memorySceneId = 'lighthouse', onSceneReadyChange, sceneMotion = true, interactionEpoch = 0, onReadyChange, modelSrc, screenSrc, coverSrc = screenSrc, videoSrc, videoPlaying = true, wallpaperMode = "full", screenOrientation = 0, screenLayoutVariant = 'default', foldEffects = true, foldProjection = true, innerFocusFlip = false, screenOverlaySrc, coverOverlaySrc, revealSrc, depthSrc, depthEnabled = true, depthStrength = 0.3, finish = 'star-white', rotation = -6, rotationX = 0, rotationZ = 0, dragToRotate = false, sceneOrbit = false, onRotationStart, onRotationEnd, onRotationChange, zoom = 0.991875, zoomScale = 1, onZoomChange, exposure = 1.2, blur = 28, parallax = 1, language = 'en', className = '', ...props }: PhoneDeviceProps) {
   const { progress, setValue, toggle } = useFoldablePhone()
   const reducedMotion = useReducedMotion()
   const canvas = useRef<HTMLCanvasElement>(null)
@@ -326,6 +326,7 @@ function PhoneDeviceSurface({ homeScale = 1, homeInspection, homeWheel = false, 
     const context = element.getContext('webgl2', { alpha: true, antialias: true, preserveDrawingBuffer: true })
     if (!context) { setStatusKey('webgl'); return }
     const renderer = new WebGLRenderer({ canvas: element, context, alpha: true, antialias: true, preserveDrawingBuffer: true })
+    renderer.localClippingEnabled = true
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.toneMapping = ACESFilmicToneMapping
     if (diorama) { renderer.shadowMap.enabled = true; renderer.shadowMap.type = PCFShadowMap }
@@ -744,7 +745,19 @@ function PhoneDeviceSurface({ homeScale = 1, homeInspection, homeWheel = false, 
         points.current.clear(); pinch.current = undefined; drag.current = undefined
         cancelDynamics(); onRotationEnd?.(); suppressClick.current = true
       }}
-      onClick={event => { if (!dragToRotate && !suppressClick.current) toggle(event.detail === 0); suppressClick.current = false }}
+      onClick={event => {
+        if (!suppressClick.current) {
+          if (onCoverOpen && surface.current) {
+            const current = surface.current
+            const rect = current.renderer.domElement.getBoundingClientRect()
+            const ray = new Raycaster()
+            ray.setFromCamera(new Vector2((event.clientX - rect.left) / rect.width * 2 - 1, 1 - (event.clientY - rect.top) / rect.height * 2), current.camera)
+            const hit = event.detail === 0 || ray.intersectObject(current.model.body, true).some(hit => hit.object instanceof Mesh && hit.object.material === current.model.cover)
+            if (hit) onCoverOpen()
+          } else if (!dragToRotate) toggle(event.detail === 0)
+        }
+        suppressClick.current = false
+      }}
       onWheel={event => {
         if (!onZoomChange || browsePhotos || homeWheel) return
         cancelAnimationFrame(inertiaFrame.current); inertiaFrame.current = 0

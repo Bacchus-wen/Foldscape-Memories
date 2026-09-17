@@ -252,7 +252,7 @@ export function App() {
   };
   const endRotation = () => {
     orbitDragging.current = false;
-    orbitResumeAt.current = performance.now() + 3000;
+    orbitResumeAt.current = performance.now() + MEMORY_ORBIT_DELAY;
   };
 
   const togglePlayback = () => {
@@ -383,6 +383,7 @@ export function App() {
             homeInspection={homeInspection}
             homeWheel={phase === "cover" && (photoCoverView || inspectingDevice)}
             browsePhotos={photoCoverView}
+            onCoverOpen={photoCoverView && photoJourney.position >= 1 && !pendingPhotoOpen ? openWithPhotograph : undefined}
             onCoverPhotoState={setCoverPhoto}
             foldEffects={!isMemory}
             foldProjection={!isMemory && pose === "foldable"}
@@ -403,7 +404,7 @@ export function App() {
             zoomScale={1}
             onZoomChange={(zoom) => {
               cancelPoseTransition();
-              if (inspectingScene) orbitResumeAt.current = performance.now() + 3000;
+              if (inspectingScene) orbitResumeAt.current = performance.now() + MEMORY_ORBIT_DELAY;
               else stopAutoDemo();
               commitModelZoom(zoom);
             }}

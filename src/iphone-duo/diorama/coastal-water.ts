@@ -24,6 +24,7 @@ export function createCoastalWater(left: Group, right: Group, resolution = 768) 
       pageOffset: { value: 0 },
       time: { value: 0 },
       landMask: { value: 0 },
+      reflectionStrength: { value: 1 },
     },
     vertexShader: `
       uniform mat4 textureMatrix;
@@ -48,6 +49,7 @@ export function createCoastalWater(left: Group, right: Group, resolution = 768) 
       uniform sampler2D tDiffuse;
       uniform float time;
       uniform float landMask;
+      uniform float reflectionStrength;
       varying vec4 vReflection;
       varying vec2 vCoast;
       varying vec3 vWorldPosition;
@@ -76,7 +78,7 @@ export function createCoastalWater(left: Group, right: Group, resolution = 768) 
         vec3 water = mix(color*.76, color*1.2,softBand);
         water = mix(water, vec3(.32,.27,.37), .14*smoothstep(-.15,.73,p.y));
         water += vec3(.017,.02,.032)*(longWave*.3 + smallWave*.18 + fineWave*.07);
-        float reflectionAmount = (.7+fresnel*.22) * reflected.a;
+        float reflectionAmount = (.7+fresnel*.22) * reflected.a * reflectionStrength;
         vec3 result = mix(water, reflected.rgb*.88 + water*.12, reflectionAmount);
         float glint = pow(max(0.0,smallWave*.5+fineWave*.5),12.0);
         result += vec3(.12,.10,.09)*glint*.08;
@@ -125,7 +127,14 @@ export function createCoastalWater(left: Group, right: Group, resolution = 768) 
     update(progress: number, timeSeconds = 0, motionEnabled = false) {
       surfaces.forEach(water => { water.visible = progress > .014 })
       const shaderTime = motionEnabled ? timeSeconds : 0
-      waters.forEach(water => { (water.material as ShaderMaterial).uniforms.time.value = shaderTime })
+      const t = Math.min(1, Math.max(0, (progress - .86) / .10))
+      waters.forEach((water, side) => {
+        const uniforms = (water.material as ShaderMaterial).uniforms
+        uniforms.time.value = shaderTime
+        // A tilted mirror slices the stationary landscape into a second false
+        // silhouette. Join the reflection only as the two screen planes meet.
+        uniforms.reflectionStrength.value = side ? 1 : t * t * (3 - 2 * t)
+      })
     },
     dispose() {
       if (disposed) return

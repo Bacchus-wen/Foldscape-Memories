@@ -6,7 +6,7 @@ export const MEMORY_CLOSED_POSE = {
 }
 
 export const MEMORY_MAX_ZOOM = 1.55 * 1.2
-export const MEMORY_ORBIT_DELAY = 1500
+export const MEMORY_ORBIT_DELAY = 500
 
 export const MEMORY_SCENE_POSE = {
   id: 'scene', fold: 1, orientation: 0,

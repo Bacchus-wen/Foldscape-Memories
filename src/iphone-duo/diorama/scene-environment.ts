@@ -30,10 +30,10 @@ export function createSceneEnvironment(left:Group,right:Group,id:string,resoluti
     mesh.castShadow=true;mesh.receiveShadow=true;mesh.layers.enable(MEMORY_REFLECTION_LAYER);group.add(mesh)
   })
   let disposed=false
-  return {kind,
+  return {kind, details: groups,
     update(progress:number,time=0,motion=false){
       ground?.update(progress);water?.update(progress,time,motion)
-      groups.forEach(group=>{group.visible=progress>.014;group.scale.z=Math.min(1,Math.max(0,progress/.2))})
+      groups.forEach(group=>{group.visible=progress>.014;group.scale.z=kind==='meadow'?1:Math.min(1,Math.max(0,progress/.2))})
     },
     dispose(){if(disposed)return;disposed=true;ground?.dispose();water?.dispose();groups.forEach(g=>{g.traverse(o=>{if(o instanceof InstancedMesh)o.dispose()});g.removeFromParent()});geometry.dispose();material.dispose()},
   }

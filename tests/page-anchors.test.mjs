@@ -32,3 +32,17 @@ test('left page normal reverses on closing and both anchors survive arbitrary sc
   const after = anchors.right.getWorldPosition(new Vector3())
   assert.ok(after.distanceTo(before.add(new Vector3(2,3,-1))) < .0001)
 })
+
+test('flat scene stays on the right screen plane throughout opening and rewind', async () => {
+  const { host, screen, fold } = await loadPhoneFixture()
+  const anchors = createPageAnchors(screen, host, true)
+  anchors.update()
+  const open = [anchors.left.matrix.clone(), anchors.right.matrix.clone()]
+  for (const p of [0, .2, .6, 1, .6, .2, 0]) {
+    fold(p); anchors.update()
+    for (const [side, group] of [anchors.left, anchors.right].entries()) {
+      group.matrix.elements.forEach((v, i) => assert.ok(Math.abs(v - open[side].elements[i]) < .0001))
+    }
+  }
+  anchors.dispose()
+})

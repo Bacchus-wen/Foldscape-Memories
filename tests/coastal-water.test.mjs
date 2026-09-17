@@ -42,6 +42,12 @@ test('two moving water planes avoid recursive reflections and release all GPU re
   water.update(.8, 8, false)
   assert.deepEqual(timeUniforms.map(uniform => uniform.value), [0, 0],
     'disabled motion keeps the original static shader phase')
+  for (const [progress, strength] of [[.5, 0], [.8, 0], [.91, .5], [.96, 1], [1, 1], [.91, .5], [.5, 0]]) {
+    water.update(progress)
+    assert.ok(Math.abs(water.waters[0].material.uniforms.reflectionStrength.value - strength) < 1e-6,
+      'left reflection joins smoothly only as the lid becomes flat, including rewind')
+    assert.equal(water.waters[1].material.uniforms.reflectionStrength.value, 1)
+  }
   const resources = new Set([...left.children, ...right.children].flatMap(surface => [surface.geometry, surface.material]))
   water.waters.forEach(reflector => resources.add(reflector.getRenderTarget()))
   const counts = new Map()

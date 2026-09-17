@@ -50,7 +50,7 @@ test('the final view is fully open, front-facing and held indefinitely', () => {
   assert.deepEqual(end.rotation, { x: -72, y: 0, z: 0 })
   assert.equal(end.zoom, 1.55 * 1.2)
   assert.equal(end.zoom, MEMORY_MAX_ZOOM)
-  assert.equal(MEMORY_ORBIT_DELAY, 1500)
+  assert.equal(MEMORY_ORBIT_DELAY, 500)
   assert.deepEqual(getMemoryPresentation(MEMORY_PRESENTATION_DURATION + 60000), end)
 })
 
