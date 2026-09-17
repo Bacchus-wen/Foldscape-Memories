@@ -25,6 +25,7 @@ class FakeAudioContext {
   constructor() { this.currentTime = 4; this.state = 'suspended'; this.destination = new FakeNode('destination'); this.nodes = []; FakeAudioContext.instances.push(this) }
   node(kind) { const node = new FakeNode(kind); this.nodes.push(node); return node }
   createGain() { return this.node('gain') }
+  createMediaElementSource(media) { const node = this.node('media'); node.media = media; return node }
   createBiquadFilter() { return this.node('filter') }
   createBufferSource() { return this.node('buffer-source') }
   createOscillator() { return this.node('oscillator') }
@@ -200,3 +201,30 @@ test('reports unsupported audio without creating partial state', async () => {
   await assert.rejects(audio.setCoast(true), /Web Audio is not supported/)
   assert.equal(audio.hasContext(), false)
 })
+
+test('music streams the supplied file lazily, uses no synthesized sources and releases playback', async () => {
+  FakeAudioContext.instances.length = 0; FakeAudioContext.resumeFactory = undefined;
+  const tracks = [], timers = [];
+  class Track {
+    constructor(src) { this.src = src; this.paused = true; tracks.push(this) }
+    addEventListener() {}
+    play() { this.paused = false; return Promise.resolve() }
+    pause() { this.paused = true }
+    removeAttribute() { this.src = '' }
+    load() {}
+  }
+  const audio = createCoastalAudio({ AudioContextClass: FakeAudioContext, AudioClass: Track, musicSrc: '/audio/through-the-arbor.mp3', setTimeoutFn: fn => { timers.push(fn); return timers.length }, clearTimeoutFn() {} });
+  assert.equal(tracks.length, 0);
+  audio.setEnvironment({ active: true, fold: 1 });
+  await audio.setMusic(true);
+  assert.equal(tracks[0].src, '/audio/through-the-arbor.mp3');
+  assert.equal(tracks[0].paused, false);
+  assert.equal(tracks[0].loop, true);
+  const nodes = FakeAudioContext.instances[0].nodes;
+  assert.equal(nodes.filter(n => n.kind === 'media').length, 1);
+  assert.equal(nodes.filter(n => n.kind === 'oscillator' || n.kind === 'buffer-source').length, 0);
+  await audio.setMusic(false); timers.at(-1)();
+  assert.equal(tracks[0].paused, true);
+  await audio.dispose();
+  assert.equal(tracks[0].src, '');
+});

@@ -134,7 +134,7 @@ export default function MemoryExperience({ children, photoJourney, inspectingDev
         <div className="memory-transport-actions">
           <button type="button" className={`memory-icon-button memory-orbit-button ${autoOrbit && exploring ? 'is-on' : ''}`} aria-label={autoOrbit ? 'Pause automatic orbit' : 'Start automatic orbit'} aria-pressed={autoOrbit} disabled={!exploring || reduced} title={reduced ? 'Automatic orbit is off with reduced motion' : 'Automatic orbit'} onClick={() => onAutoOrbit(!autoOrbit)}><ArrowsClockwise size={20} /><span className="memory-active-dot" /></button>
           <button type="button" className="memory-icon-button" aria-label="View original photo" aria-haspopup="dialog" onClick={() => setPanel('photo')}><ImageSquare size={20} /></button>
-          <button type="button" className={`memory-icon-button ${(sound.coast || sound.music) ? 'is-on' : ''}`} aria-label="Sound settings" aria-haspopup="dialog" onClick={() => setPanel('sound')}>{sound.coast || sound.music ? <SpeakerHigh size={20} /> : <SpeakerSlash size={20} />}</button>
+          <button type="button" className={`memory-icon-button ${sound.music ? 'is-on' : ''}`} aria-label="Sound settings" aria-haspopup="dialog" onClick={() => setPanel('sound')}>{sound.music ? <SpeakerHigh size={20} /> : <SpeakerSlash size={20} />}</button>
           <button type="button" className="memory-icon-button memory-device-color" aria-label={finish === 'night-sky' ? 'Switch device to Star White' : 'Switch device to Night Sky'} title={finish === 'night-sky' ? 'Star White' : 'Night Sky'} onClick={() => onFinish(finish === 'night-sky' ? 'star-white' : 'night-sky')}><span className={finish === 'night-sky' ? 'night-sky' : 'star-white'} /></button>
         </div>
       </motion.div>
@@ -147,11 +147,11 @@ export default function MemoryExperience({ children, photoJourney, inspectingDev
       <p className="memory-dialog-note">{photo.scene ? 'A photograph becomes a place you can look around.' : 'This photo previews the outer-screen transition. Select the lighthouse or scarlet sails to unfold.'}</p>
     </MemoryDialog>
     <MemoryDialog open={panel === 'sound'} onClose={() => setPanel(null)} title="A little atmosphere" className="memory-sound-dialog">
-      <p className="memory-sound-intro">Let the coast come a little closer.</p>
-      <SettingToggle title="Coast" detail="Soft wind and water" checked={sound.coast} onChange={sound.onCoast} />
-      <SettingToggle title="Music" detail="A quiet, slowly changing ambient score" checked={sound.music} onChange={sound.onMusic} />
+      <p className="memory-sound-intro">A melody to return to.</p>
+      <SettingToggle title="Music" detail="Through the Arbor — Kevin Kern" checked={sound.music} onChange={sound.onMusic} />
       <div className="memory-settings-section"><div className="memory-field-heading"><h3>Volume</h3><output>{Math.round(sound.volume * 100)}%</output></div><input className="memory-setting-range" type="range" min="0" max="100" aria-label="Sound volume" value={Math.round(sound.volume * 100)} onChange={event => sound.onVolume(Number(event.target.value) / 100)} /></div>
       <p className="memory-dialog-note">Sound follows the memory and fades as it closes.</p>
+      <p className="memory-dialog-note">Through the Arbor · Kevin Kern<br />From <em>In the Enchanted Garden</em><br />© / ℗ 1996 Real Music. All rights reserved.<br /><a href="https://open.spotify.com/track/2xwp3DfpcINuUpbnQM86X1" target="_blank" rel="noreferrer">Track credits ↗</a></p>
       {sound.error && <p className="memory-audio-error" role="alert">{sound.error}</p>}
     </MemoryDialog>
   </div>;

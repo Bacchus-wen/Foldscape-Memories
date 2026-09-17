@@ -33,12 +33,18 @@ function noiseSource(context, duration, filterType, frequency) {
   return { source, filter }
 }
 
-function createGraph(context) {
+function createGraph(context, media) {
   const master = context.createGain(); master.label = 'master'; master.gain.value = 0
   const volume = context.createGain(); volume.label = 'volume'; volume.gain.value = .55
   const coast = context.createGain(); coast.label = 'coast'; coast.gain.value = 0
   const music = context.createGain(); music.label = 'music'; music.gain.value = 0
   coast.connect(volume); music.connect(volume); volume.connect(master); master.connect(context.destination)
+
+  if (media) {
+    const source = context.createMediaElementSource(media)
+    source.connect(music)
+    return { master, volume, coast, music, sources: [], nodes: [source, coast, music, volume, master] }
+  }
 
   const wind = noiseSource(context, 3.7, 'lowpass', 900)
   const water = noiseSource(context, 2.3, 'bandpass', 520)
@@ -72,8 +78,17 @@ export function createCoastalAudio({
   setTimeoutFn = globalThis.setTimeout,
   clearTimeoutFn = globalThis.clearTimeout,
   onError = () => {},
+  musicSrc,
+  AudioClass = globalThis.Audio,
 } = {}) {
   let context
+  let media
+  let playPromise
+  const playMedia = () => {
+    if (!media || !media.paused) return Promise.resolve()
+    if (!playPromise) playPromise = Promise.resolve(media.play()).finally(() => { playPromise = undefined })
+    return playPromise
+  }
   let graph
   let disposed = false
   let coast = false
@@ -92,6 +107,8 @@ export function createCoastalAudio({
     cancelSuspend()
     if (audible() && context.state === 'suspended') await context.resume()
     if (disposed || !graph) return
+    if (audible() && media?.paused) await playMedia()
+    if (disposed || !graph) return
     const shouldPlay = audible()
     schedule(graph.coast.gain, coast ? 1 : 0, context)
     schedule(graph.music.gain, music ? 1 : 0, context)
@@ -101,7 +118,7 @@ export function createCoastalAudio({
       const expectedContext = context
       suspendTimer = setTimeoutFn(() => {
         suspendTimer = undefined
-        if (!disposed && context === expectedContext && !audible() && expectedContext.state === 'running') expectedContext.suspend().catch(() => {})
+        if (!disposed && context === expectedContext && !audible() && expectedContext.state === 'running') { media?.pause(); expectedContext.suspend().catch(() => {}) }
       }, SUSPEND_DELAY_MS)
     }
   }
@@ -113,9 +130,15 @@ export function createCoastalAudio({
     if (!AudioContextClass) throw new Error('Web Audio is not supported in this browser.')
     if (!context) {
       context = new AudioContextClass()
-      graph = createGraph(context)
+      if (musicSrc) {
+        media = new AudioClass(musicSrc)
+        media.preload = 'none'
+        media.loop = true
+        media.addEventListener('error', () => { if (!disposed) onError(new Error('The music file could not be loaded.')) })
+      }
+      graph = createGraph(context, media)
     }
-    if (context.state === 'suspended') await context.resume()
+    await Promise.all([context.state === 'suspended' ? context.resume() : undefined, playMedia()])
   }
 
   return {
@@ -149,6 +172,7 @@ export function createCoastalAudio({
         for (const source of graph.sources) { try { source.stop() } catch {}; source.disconnect() }
         for (const node of graph.nodes) node.disconnect()
       }
+      if (media) { media.pause(); media.removeAttribute('src'); media.load(); media = undefined }
       context = undefined; graph = undefined
       if (closing && closing.state !== 'closed') await closing.close()
     },

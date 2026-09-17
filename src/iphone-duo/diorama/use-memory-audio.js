@@ -34,7 +34,7 @@ export function useMemoryAudio({ active, fold, rewinding }) {
 
   const engine = useCallback(() => {
     if (!engineRef.current) {
-      engineRef.current = createCoastalAudio({ onError: cause => {
+      engineRef.current = createCoastalAudio({ musicSrc: '/audio/through-the-arbor.mp3', onError: cause => {
         if (mountedRef.current) setError(formatMemoryAudioError(cause))
       } })
       engineRef.current.setEnvironment(environmentRef.current)
