@@ -92,6 +92,9 @@ export function createCoverMorph({ material, photos, draw, element, onState, sce
       }
       bounds.set(left, bottom, right - left, top - bottom);
       gallery.project(camera, bounds, far);
+      const stage = element.closest?.('.memory-stage');
+      stage?.style.setProperty('--photo-drag-x', `${(left + right + 2) * 25}%`);
+      stage?.style.setProperty('--photo-drag-y', `calc(${(1 - bottom) * 50}% + 35px)`);
       element.dataset.coverBounds = [left, bottom, right, top].map(value => value.toFixed(5)).join(',');
     },
     activity(nextVisible, nextReduced, nextRetraction = 0) {

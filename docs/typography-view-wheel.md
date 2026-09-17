@@ -14,3 +14,13 @@ Verification: 75 automated tests passed; production build passed; Chrome screens
 - The color swatch directly toggles Star White / Night Sky without opening an overlay.
 - The user clarified that the opening size means 1.2 times the previous wheel zoom limit: 1.55 × 1.2 = 1.86. Both the showcase endpoint and zoom ceiling now use that value. The existing .9 framing and +20px vertical placement remain unchanged.
 - Automatic orbit starts 1500ms after showcase completion; drag-release pause behavior is retained.
+
+## Drag target and framing revision
+
+- The gallery drag surface is exactly 50×50 CSS pixels, centered on the hint. Its center follows the projected cover bottom plus 35px. Wheel input remains available across the home view.
+- The right-side wheel uses the opposite arc direction and is hidden while the cover/home page is shown.
+- Collection framing is 1.14 times its previous size; entrance framing is unchanged.
+- Osaka castle's composition width/depth are both multiplied by .8 before fitting to the screen; proportional height follows the same asset scale.
+- Open framing moves 30px upward relative to the previous +20px endpoint (new endpoint -10px). A symmetric sin² term lifts the intermediate opening/closing trajectory an additional 20px, with zero extra offset at both endpoints.
+
+Checks: 75 tests plus 21 scene-layout checks passed; production build passed.

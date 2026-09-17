@@ -9,7 +9,7 @@ export const SPREAD_LAYOUTS: Record<string,{angle:number;width:number;depth:numb
   iceberg: {angle:-9,width:1.98,depth:1.36},
   'coastal-house': {angle:-13,width:1.99,depth:1.39},
   santorini: {angle:-30,width:1.97,depth:1.39},
-  'osaka-castle': {angle:-14,width:1.97,depth:1.39},
+  'osaka-castle': {angle:-14,width:1.97*.8,depth:1.39*.8},
 }
 
 /** Bake each mesh and clip triangles exactly at the hinge, including interpolated UVs. */

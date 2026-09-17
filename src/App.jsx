@@ -12,7 +12,7 @@ import { SEA_SCREEN, useLighthousePhoto } from "./iphone-duo/diorama/use-lightho
 import { MEMORY_CLOSED_POSE, MEMORY_SCENE_POSE, MEMORY_ORBIT_DELAY, MEMORY_PRESENTATION_DURATION, MEMORY_RETURN_DURATION, getPhotoRetraction } from "./iphone-duo/diorama/memory-presentation";
 const DEFAULT_MODEL_ZOOM = 0.991875;
 const SCENE_POSE = MEMORY_SCENE_POSE;
-const DISPLAY_POSES = [SCENE_POSE, POSES.find(pose => pose.id === "landscape"), POSES.find(pose => pose.id === "closed")];
+const DISPLAY_POSES = [SCENE_POSE, { ...POSES.find(pose => pose.id === "landscape"), zoom: DEFAULT_MODEL_ZOOM * 1.6 }, POSES.find(pose => pose.id === "closed")];
 
 const POSE_LABELS = {
   zh: { scene: "场景", landscape: "横屏", closed: "闭合" },

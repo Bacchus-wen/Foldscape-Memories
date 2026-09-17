@@ -8,8 +8,9 @@ export function frameSceneCamera(camera, width, height, top, bottom) {
 }
 
 // Keep the photograph unchanged; ease the unfolded scene into its final framing.
-export function sceneFrameAdjustment(fold) {
+export function sceneFrameAdjustment(fold, rotationX = -72) {
   const t = Math.max(0, Math.min(1, fold));
   const eased = t * t * (3 - 2 * t);
-  return { scale: 1 - .1 * eased, offsetY: 20 * eased };
+  const landscape = Math.max(0, 1 - Math.abs(rotationX) / 72);
+  return { scale: 1 - .1 * eased, offsetY: -10 * eased - 20 * Math.sin(Math.PI * t) ** 2 - 10 * eased * landscape };
 }

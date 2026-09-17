@@ -112,9 +112,9 @@ export default function MemoryExperience({ children, photoJourney, inspectingDev
       <p>{exploring ? 'Take your time. Look around.' : 'From a photograph to a place.'}</p>
     </motion.div>
 
-      <div className="memory-view-wheel memory-view-wheel--outside">
+      <div className="memory-view-wheel memory-view-wheel--outside" hidden={!immersive}>
         <OptionWheel items={presets.map(item => item.label)} selected={presetIndex < 0 ? undefined : presetIndex}
-          onChange={index => onPreset(presets[index].id)} side="left" fontSize={2.1} spacing={1.4}
+          onChange={index => onPreset(presets[index].id)} side="right" fontSize={2.1} spacing={1.68}
           curve={1} tilt={6} blur={2} fade={.25} minOpacity={.05} smoothing={200} inset={24} ariaLabel="Viewpoint" />
       </div>
     <div className="memory-stage">{children}<MemoryPhotoRibbon journey={photoJourney} visible={photoCoverView} disabled={!browse} /></div>

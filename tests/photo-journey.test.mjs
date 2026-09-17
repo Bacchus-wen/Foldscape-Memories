@@ -10,11 +10,11 @@ test('continuous gallery travel only invalidates UI at control and caption bound
   }
 });
 
-test('starts alone, shrinks to 77 percent, then locks framing', () => {
+test('starts alone, uses the enlarged collection scale, then locks framing', () => {
   const start = samplePhotoJourney(0, 4), arrived = samplePhotoJourney(1, 4);
   assert.equal(start.reveal, 0);
   assert.equal(start.cursor, 0);
-  assert.equal(arrived.scale / start.scale, .77);
+  assert.ok(Math.abs(arrived.scale / start.scale - .77 * 1.14) < 1e-10);
   for (const position of [1.1, 2, 2.8, 4]) assert.equal(samplePhotoJourney(position, 4).scale, arrived.scale);
 });
 

@@ -47,7 +47,7 @@ test('scene render resolution stays within two million pixels without oversampli
   assert.equal(scenePixelRatio(390, 500, 1), 1);
 });
 
-test('unfolded framing scales the scene to 90% and moves it down exactly 20 CSS pixels', () => {
+test('unfolded framing scales the scene to 90% and moves it up 10 CSS pixels with an extra 20px lift in transit', () => {
   const camera = new PerspectiveCamera(30, 1, .1, 100);
   camera.position.z = 36; camera.updateMatrixWorld();
   frameSceneCamera(camera, 1440, 900, 222, 160);
@@ -57,8 +57,14 @@ test('unfolded framing scales the scene to 90% and moves it down exactly 20 CSS 
   camera.zoom *= frame.scale; camera.view.offsetY -= frame.offsetY; camera.updateProjectionMatrix();
   const moved = new Vector3().project(camera);
   const scaled = new Vector3(4, 0, 0).project(camera);
-  assert.ok(Math.abs((origin.y - moved.y) * 450 - 20) < 1e-8);
+  assert.ok(Math.abs((origin.y - moved.y) * 450 + 10) < 1e-8);
   assert.ok(Math.abs((scaled.x - moved.x) / (edge.x - origin.x) - .9) < 1e-8);
-  assert.deepEqual(sceneFrameAdjustment(0), { scale: 1, offsetY: 0 });
-  assert.deepEqual(sceneFrameAdjustment(.5), { scale: .95, offsetY: 10 });
+  assert.equal(sceneFrameAdjustment(0).scale, 1);
+  assert.ok(Math.abs(sceneFrameAdjustment(0).offsetY) < 1e-10);
+  assert.deepEqual(sceneFrameAdjustment(.5), { scale: .95, offsetY: -25 });
+});
+
+test('landscape receives a further 10px lift without shifting the closed cover or scene view', () => {
+  assert.equal(sceneFrameAdjustment(1, 0).offsetY - sceneFrameAdjustment(1, -72).offsetY, -10);
+  assert.ok(Math.abs(sceneFrameAdjustment(0, 0).offsetY) < 1e-10);
 });

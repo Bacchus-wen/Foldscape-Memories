@@ -1,7 +1,7 @@
 import { useEffect, useEffectEvent, useRef } from 'react';
 import { gsap } from 'gsap';
 import { Observer } from 'gsap/Observer';
-import { ArrowDown, CaretLeft, CaretRight } from '@phosphor-icons/react';
+import { ArrowDown, ArrowLeft, ArrowRight, CaretLeft, CaretRight } from '@phosphor-icons/react';
 import { MEMORY_PHOTOS } from '../iphone-duo/memory-photos';
 import { motion, useReducedMotion } from 'motion/react';
 
@@ -15,7 +15,7 @@ export default function MemoryPhotoRibbon({ journey, visible, disabled }) {
   const press = useEffectEvent(() => { journey.stop(); start.current = journey.position; });
   const move = useEffectEvent(observer => {
     const delta = observer.axis === 'y' ? observer.startY - observer.y : observer.startX - observer.x;
-    journey.move(start.current + delta / Math.max(220, Math.min(600, gesture.current.clientWidth * .7)));
+    journey.move(start.current + delta / Math.max(220, Math.min(600, gesture.current.parentElement.clientWidth * .7)));
   });
   useEffect(() => {
     if (!visible || disabled) return;
@@ -27,7 +27,7 @@ export default function MemoryPhotoRibbon({ journey, visible, disabled }) {
     return () => observer.kill();
   }, [visible, disabled]);
   return <div className={`memory-photo-ribbon ${visible ? '' : 'is-hidden'}`} aria-hidden={!visible} inert={!visible || undefined}>
-    <div ref={gesture} className="memory-photo-gesture" role="group" aria-label="Browse photographs. Scroll or drag horizontally." tabIndex={disabled ? -1 : 0}
+    <div ref={gesture} className="memory-photo-gesture" hidden={!visible || disabled || position < .98} role="group" aria-label="Browse photographs. Scroll or drag horizontally." tabIndex={disabled ? -1 : 0}
       onKeyDown={event => {
         if (disabled) return;
         if (['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
@@ -38,7 +38,9 @@ export default function MemoryPhotoRibbon({ journey, visible, disabled }) {
           else if (position <= 1) journey.reset();
           else journey.select(Math.max(0, Math.ceil(frame.cursor) - 1));
         }
-      }} />
+      }}>
+      {visible && !disabled && position >= .98 && <div className="memory-drag-cue" aria-hidden="true"><ArrowLeft size={17} /><span>Drag to explore</span><ArrowRight size={17} /></div>}
+    </div>
   </div>;
 }
 

@@ -14,7 +14,7 @@ export function samplePhotoJourney(value, count) {
   const next = Math.min(count - 1, current + 1), time = cursor - current;
   const transfer = clamp((time - .24) / .64);
   return { position, cursor, current, next, time, transfer,
-    scale: 1.5 * (1 - .23 * smooth(intro)), reveal: smooth((intro - .28) / .72),
+    scale: 1.5 * (1 - (1 - .77 * 1.14) * smooth(intro)), reveal: smooth((intro - .28) / .72),
     index: transfer < .5 ? current : next, busy: time > .00001 && time < .99999 };
 }
 

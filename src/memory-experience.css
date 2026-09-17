@@ -214,7 +214,7 @@
 }
 .memory-photo-ribbon { position: absolute; inset: 0; z-index: 3; pointer-events: none; transition: opacity .45s ease; }
 .memory-photo-ribbon.is-hidden { opacity: 0; pointer-events: none; }
-.memory-photo-gesture { position: absolute; inset: var(--memory-frame-top) 0 var(--memory-frame-bottom); pointer-events: auto; cursor: grab; touch-action: none; user-select: none; }
+.memory-photo-gesture { position: absolute; left: var(--photo-drag-x, 50%); top: var(--photo-drag-y, 70%); width: 50px; height: 50px; transform: translate(-50%, -50%); pointer-events: auto; cursor: grab; touch-action: none; user-select: none; }
 .memory-photo-gesture:active { cursor: grabbing; }
 .memory-photo-gesture:focus-visible { outline-offset: -4px; border-radius: 18px; }
 .memory-photo-navigation { grid-area: navigation; display: grid; justify-items: center; gap: 4px; white-space: nowrap; }
@@ -280,7 +280,7 @@
   .memory-transport-actions { gap: 6px; }
 }
 
-.memory-view-wheel--outside { position: absolute; z-index: 6; right: 12px; top: 50%; transform: translateY(-50%); width: 228px; height: 280px; }
+.memory-view-wheel--outside { position: absolute; z-index: 6; translate: -10px -30px; right: 12px; top: 50%; transform: translateY(-50%); width: 228px; height: 280px; }
 @media (max-width: 1000px) {
   .memory-view-wheel--outside { right: 2px; width: 170px; }
   .memory-view-wheel--outside .option-wheel__item { font-size: 25px; }
@@ -289,3 +289,14 @@
   .memory-view-wheel--outside { top: auto; bottom: 178px; transform: none; height: 180px; width: 112px; right: 4px; }
   .memory-view-wheel--outside .option-wheel__item { font-size: 17px; }
 }
+
+/* The hint lives inside the actual gallery gesture surface, so dragging it works. */
+.memory-drag-cue { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 14px; color: #627078; font: 400 11px/1.4 Inter, sans-serif; letter-spacing: .025em; white-space: nowrap; pointer-events: none; animation: memory-drag-cue-enter .45s ease both; }
+.memory-drag-cue svg { flex: none; }
+@keyframes memory-drag-cue-enter { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .memory-drag-cue { animation: none; } }
+@media (max-width: 600px) { .memory-drag-cue { gap: 10px; font-size: 10px; } }
+
+/* Keep longer place names readable beside the scene and playback controls. */
+.memory-scene-heading h2 { max-width: min(540px, 82vw); text-wrap: balance; }
+.memory-stage-caption strong { max-width: 30ch; text-wrap: balance; }

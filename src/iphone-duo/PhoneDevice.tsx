@@ -239,7 +239,7 @@ function PhoneDeviceSurface({ homeScale = 1, homeInspection, homeWheel = false, 
     current.model.body.rotation.x = rotationX * Math.PI / 180
     current.model.body.rotation.z = rotationZ * Math.PI / 180
     current.camera.position.z = 36 / Math.max(0.72, Math.min(3.1, zoom * zoomScale))
-    const framing = sceneFrameAdjustment(diorama ? p : 0)
+    const framing = sceneFrameAdjustment(diorama ? p : 0, rotationX)
     current.camera.zoom = (homeScale + (1.5 - homeScale) * (homeInspection?.get() ?? 0)) * framing.scale
     if (diorama && current.camera.view) current.camera.view.offsetY = -frameTop.current - framing.offsetY
     current.camera.updateProjectionMatrix()
@@ -428,7 +428,7 @@ function PhoneDeviceSurface({ homeScale = 1, homeInspection, homeWheel = false, 
         frameSceneCamera(camera, width, height,
           parseFloat(style.getPropertyValue('--memory-frame-top')) || 0,
           parseFloat(style.getPropertyValue('--memory-frame-bottom')) || 0)
-        if (camera.view) camera.view.offsetY -= sceneFrameAdjustment(progress.get()).offsetY
+        if (camera.view) camera.view.offsetY -= sceneFrameAdjustment(progress.get(), liveView.current.rotation.x).offsetY
         camera.updateProjectionMatrix()
       } else {
         camera.aspect = width / height
