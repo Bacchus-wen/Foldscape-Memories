@@ -77,6 +77,20 @@ test('queued photographs stay clear of photographs passing through the device', 
   }
 });
 
+test('unloaded photos cap travel without replaying old input after arrival', () => {
+  let available = 1;
+  const driver = createPhotoJourney({ count: 5, getLimit: () => available, onUpdate() {} });
+  driver.seek(5, true);
+  assert.equal(driver.value(), 1);
+  available = 3;
+  assert.equal(driver.target(), 1);
+  driver.seek(5, true);
+  assert.equal(driver.value(), 3);
+  driver.seek(0, true);
+  assert.equal(driver.value(), 0);
+  driver.dispose();
+});
+
 test('new input interrupts the active journey instead of queuing stale photographs', () => {
   let position;
   const driver = createPhotoJourney({ count: 4, onUpdate: value => { position = value; } });

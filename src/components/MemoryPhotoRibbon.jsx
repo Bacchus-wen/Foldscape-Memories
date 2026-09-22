@@ -46,6 +46,7 @@ export default function MemoryPhotoRibbon({ journey, visible, disabled }) {
 
 export function MemoryPhotoNavigation({ journey, visible, disabled }) {
   const { position, frame } = journey;
+  const availableCount = journey.availableCount ?? MEMORY_PHOTOS.length;
   const reduced = useReducedMotion();
   return <motion.div className="memory-photo-navigation" hidden={!visible} layout="position" layoutDependency={`${position >= .98}:${visible}`} transition={{ duration: reduced ? 0 : .65, ease: [.22, 1, .36, 1] }}>
       {position < .98 ? <button type="button" className="memory-scroll-cue" disabled={disabled} onClick={() => journey.select(0)}><ArrowDown size={13} /><span>Scroll to discover</span></button> :
@@ -53,9 +54,9 @@ export function MemoryPhotoNavigation({ journey, visible, disabled }) {
           <button type="button" className="memory-icon-button" aria-label="Previous photograph" disabled={disabled || frame.cursor <= 0} onClick={() => journey.select(Math.max(0, Math.ceil(frame.cursor) - 1))}><CaretLeft size={17} /></button>
           <details className="memory-photo-index">
             <summary className="memory-photo-count" title="Choose a photograph" aria-label={`Photograph ${frame.index + 1} of ${MEMORY_PHOTOS.length}`}>{String(frame.index + 1).padStart(2, '0')} <span>/ {String(MEMORY_PHOTOS.length).padStart(2, '0')}</span></summary>
-            <div className="memory-photo-dots">{MEMORY_PHOTOS.map((photo, i) => <button key={photo.id} type="button" disabled={disabled} title={photo.title} aria-label={`Photograph ${i + 1}: ${photo.title}`} aria-pressed={i === frame.index} onClick={event => { event.currentTarget.closest('details').open = false; journey.select(i); }}><span /></button>)}</div>
+            <div className="memory-photo-dots">{MEMORY_PHOTOS.map((photo, i) => <button key={photo.id} type="button" disabled={disabled || i >= availableCount} title={photo.title} aria-label={`Photograph ${i + 1}: ${photo.title}`} aria-pressed={i === frame.index} onClick={event => { event.currentTarget.closest('details').open = false; journey.select(i); }}><span /></button>)}</div>
           </details>
-          <button type="button" className="memory-icon-button" aria-label="Next photograph" disabled={disabled || frame.cursor >= MEMORY_PHOTOS.length - 1} onClick={() => journey.select(Math.min(MEMORY_PHOTOS.length - 1, Math.floor(frame.cursor) + 1))}><CaretRight size={17} /></button>
+          <button type="button" className="memory-icon-button" aria-label="Next photograph" disabled={disabled || frame.cursor >= availableCount - 1} onClick={() => journey.select(Math.min(MEMORY_PHOTOS.length - 1, Math.floor(frame.cursor) + 1))}><CaretRight size={17} /></button>
         </div>}
       {position >= .98 && <p className="memory-collection-hint">Scroll or drag to explore</p>}
   </motion.div>;

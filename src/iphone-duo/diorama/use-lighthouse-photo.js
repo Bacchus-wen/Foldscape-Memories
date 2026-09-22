@@ -9,6 +9,7 @@ export function useLighthousePhoto() {
   useEffect(() => {
     let cancelled = false
     const image = new Image()
+    image.crossOrigin = 'anonymous'
     image.onload = () => {
       const canvas = document.createElement('canvas')
       // The native cover is portrait. Pre-rotate the photograph to compensate

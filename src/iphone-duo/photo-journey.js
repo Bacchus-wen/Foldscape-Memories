@@ -41,7 +41,7 @@ export function photoPlacement(index, frame) {
   return { center, width: CARD_WIDTH };
 }
 
-export function createPhotoJourney({ count, onUpdate }) {
+export function createPhotoJourney({ count, onUpdate, getLimit = () => count }) {
   const clock = { value: 0 };
   let tween, wanted = 0, disposed = false, paused = false;
   const publish = () => { if (!disposed) onUpdate(clock.value); };
@@ -50,7 +50,7 @@ export function createPhotoJourney({ count, onUpdate }) {
     target: () => wanted,
     seek(value, immediate = false, duration = 1.1) {
       if (disposed) return;
-      wanted = clamp(value, 0, count);
+      wanted = clamp(value, 0, Math.min(count, getLimit()));
       tween?.kill();
       if (immediate) { clock.value = wanted; publish(); }
       else if (duration < .4) tween = gsap.timeline({ paused }).to(clock, { value: wanted, duration, ease: 'power3.out', onUpdate: publish });

@@ -6,7 +6,7 @@ import { createCoverMorph, createMorphUniforms } from '../src/iphone-duo/cover-m
 const tick = () => new Promise(resolve => setImmediate(resolve))
 const texture = () => new Texture({ width: 160, height: 100 })
 
-test('first photograph unlocks browsing while other images and scene warmup are pending', async () => {
+test('out-of-order photos never substitute for missing photos or move the selected scene', async () => {
   const original = TextureLoader.prototype.loadAsync
   const pending = [], states = [], scene = new Scene()
   let finishWarmup
@@ -16,6 +16,8 @@ test('first photograph unlocks browsing while other images and scene warmup are 
   const morph = createCoverMorph({ material: { uniforms }, photos: Array.from({ length: 5 }, (_, i) => ({ image: `${i}.jpg`, crop: [0, 0, 1, 1] })),
     scene, draw() {}, onState: state => states.push(state), warmup: () => warmup })
   try {
+    pending[2].resolve(texture()); await tick()
+    assert.equal(states.at(-1).ready, false, 'later photo cannot replace the initial lighthouse')
     pending[0].resolve(texture()); await tick()
     assert.equal(states.at(-1).ready, true, 'one ready image must enable the gallery')
     assert.equal(states.at(-1).prepared, false, 'model preparation may continue separately')
@@ -23,16 +25,17 @@ test('first photograph unlocks browsing while other images and scene warmup are 
     morph.seek(1)
     assert.equal(states.at(-1).busy, false, 'unloaded next image must not block the current one')
     morph.seek(3)
-    assert.equal(states.at(-1).ready, true, 'scroll input stays live on an unloaded photo')
-    assert.equal(states.at(-1).photoReady, false, 'do not open the wrong scene behind a stale photo')
-    pending[2].resolve(texture()); await tick()
+    assert.equal(states.at(-1).index, 0, 'missing second image stops travel at the first image')
+    assert.equal(states.at(-1).availableCount, 1)
     assert.equal(states.at(-1).photoReady, true)
-    pending[1].reject(new Error('one photo offline')); await tick()
-    assert.equal(states.at(-1).ready, true, 'one failed photo must not lock all the others')
-    morph.seek(2)
+    pending[3].reject(new Error('one photo offline')); await tick()
     assert.match(states.at(-1).error, /photograph/i)
+    pending[1].resolve(texture()); await tick()
+    assert.equal(states.at(-1).index, 0, 'arrival does not replay an old scroll request')
+    assert.equal(states.at(-1).availableCount, 3)
+    morph.seek(3)
+    assert.equal(states.at(-1).index, 2)
     morph.seek(1)
-    assert.equal(states.at(-1).error, '')
     finishWarmup(); await tick()
     assert.equal(states.at(-1).prepared, true)
   } finally {

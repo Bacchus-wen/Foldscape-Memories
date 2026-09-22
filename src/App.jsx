@@ -60,7 +60,7 @@ export function App() {
   }, [language]);
 
   const reducedMotion = useReducedMotion();
-  const photoJourney = usePhotoJourney(Boolean(reducedMotion));
+  const photoJourney = usePhotoJourney(Boolean(reducedMotion), coverPhoto.availableCount ?? 0);
   const homeInspection = useMotionValue(0);
   const inspectionTween = useRef(null);
   const [inspectingDevice, setInspectingDevice] = useState(false);

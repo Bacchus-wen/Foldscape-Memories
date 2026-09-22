@@ -3,13 +3,15 @@ import { useMotionValue } from 'motion/react';
 import { createPhotoJourney, samplePhotoJourney, photoJourneyUIKey } from './photo-journey';
 import { MEMORY_PHOTOS } from './memory-photos';
 
-export function usePhotoJourney(reduced) {
+export function usePhotoJourney(reduced, availableCount = MEMORY_PHOTOS.length) {
+  const available = useRef(availableCount);
+  available.current = availableCount;
   const motionPosition = useMotionValue(0);
   const [, setUIKey] = useState(photoJourneyUIKey(0, MEMORY_PHOTOS.length));
   const driver = useRef(null);
   useEffect(() => {
     let key = photoJourneyUIKey(0, MEMORY_PHOTOS.length);
-    driver.current = createPhotoJourney({ count: MEMORY_PHOTOS.length, onUpdate: value => {
+    driver.current = createPhotoJourney({ count: MEMORY_PHOTOS.length, getLimit: () => available.current, onUpdate: value => {
       motionPosition.set(value);
       const nextKey = photoJourneyUIKey(value, MEMORY_PHOTOS.length);
       if (key !== nextKey) { key = nextKey; setUIKey(key); }
@@ -20,6 +22,7 @@ export function usePhotoJourney(reduced) {
   }, []);
   useEffect(() => { if (reduced) driver.current?.seek(driver.current.target(), true); }, [reduced]);
   return {
+    availableCount,
     motionPosition,
     get position() { return motionPosition.get(); },
     get frame() { return samplePhotoJourney(motionPosition.get(), MEMORY_PHOTOS.length); },

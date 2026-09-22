@@ -24,6 +24,7 @@ export function createCoverMorph({ material, photos, draw, element, onState, sce
   const projectCover = coverMesh ? createCoverProjection(coverMesh) : null;
   let gallery, disposed = false, loaded = false, prepared = false, position = 0, visible = false, retraction = 0, previousState = '';
   const report = state => { if (!disposed) onState(state); };
+  const available = () => { let count = 0; while (textures.has(count)) count++; return count; };
   const bind = (name, index) => {
     const texture = textures.get(index), crop = photos[index].crop;
     uniforms[name === 'Current' ? 'tCurrent' : 'tNext'].value = texture;
@@ -32,9 +33,9 @@ export function createCoverMorph({ material, photos, draw, element, onState, sce
   };
   const syncFrame = () => {
     if (!loaded) return;
+    const availableCount = available();
     const frame = samplePhotoJourney(position, photos.length);
-    const fallback = textures.has(frame.index) ? frame.index : textures.keys().next().value;
-    const current = textures.has(frame.current) ? frame.current : fallback;
+    const current = frame.current;
     const next = textures.has(frame.next) ? frame.next : current;
     bind('Current', current); bind('Next', next);
     uniforms.uProgress.value = current === next ? 0 : frame.transfer;
@@ -42,6 +43,7 @@ export function createCoverMorph({ material, photos, draw, element, onState, sce
     // wall time, keeping the same image and warp when the user scrubs back.
     uniforms.uTime.value = frame.cursor * MORPH_SETTINGS.duration;
     gallery.update(frame, visible, uniforms.uReduce.value > .5, retraction);
+    gallery.medias.forEach((media, index) => { media.plane.visible = index < availableCount; });
     if (element) {
       Object.assign(element.dataset, {
         photoCurrent: String(frame.current), photoTarget: String(frame.next), photoProgress: frame.transfer.toFixed(3),
@@ -51,9 +53,9 @@ export function createCoverMorph({ material, photos, draw, element, onState, sce
       });
     }
     const photoReady = textures.has(frame.index);
-    const state = { ready: true, prepared, photoReady, loadedCount: textures.size, totalCount: photos.length,
+    const state = { ready: true, prepared, photoReady, availableCount, loadedCount: textures.size, totalCount: photos.length,
       index: frame.index, target: frame.next, busy: frame.busy || !photoReady,
-      error: failed.has(frame.index) ? 'This photograph could not load. You can still browse the other memories.' : '' };
+      error: failed.size ? 'A photograph could not load. Earlier photographs remain available; refresh to retry.' : '' };
     const key = JSON.stringify(state);
     if (key !== previousState) { previousState = key; report(state); }
     draw();
@@ -76,13 +78,13 @@ export function createCoverMorph({ material, photos, draw, element, onState, sce
     texture.generateMipmaps = false;
     texture.minFilter = texture.magFilter = LinearFilter;
     textures.set(index, texture);
-    if (!loaded) {
+    if (!loaded && textures.has(0)) {
       uniforms.morphEnabled.value = 1;
       gallery = new CircularGallery({ scene, photos, textures, element });
       loaded = true;
       syncFrame();
       void prepare();
-    } else gallery.setTexture(index, texture);
+    } else if (loaded) gallery.setTexture(index, texture);
     syncFrame();
   }).catch(() => {
     if (disposed) return;
@@ -92,7 +94,7 @@ export function createCoverMorph({ material, photos, draw, element, onState, sce
       error: 'A photograph could not load. Other photographs are still loading.' });
   }); });
   return {
-    seek(value) { position = value; syncFrame(); },
+    seek(value) { position = Math.max(0, Math.min(value, available())); syncFrame(); },
     project(camera) {
       if (!loaded || !visible || !coverMesh) return;
       const { bounds, depth } = projectCover(camera);

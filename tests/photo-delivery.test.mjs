@@ -4,6 +4,15 @@ import fs from 'node:fs/promises';
 import sharp from 'sharp';
 import { MEMORY_PHOTOS } from '../src/iphone-duo/memory-photos.js';
 
+test('all photographs preload from HTML before device initialization, matching texture request mode', async () => {
+  const html = await fs.readFile(new URL('../index.html', import.meta.url), 'utf8');
+  for (const photo of MEMORY_PHOTOS) {
+    const tag = html.split('\n').find(line => line.includes(`href="${photo.image}"`));
+    assert.ok(tag?.includes('as="image"') && tag.includes('crossorigin'));
+    assert.ok(tag.includes(`fetchpriority="${photo.id === 'lighthouse' ? 'high' : 'low'}"`));
+  }
+});
+
 for (const id of ['iceberg', 'coastal-house']) {
   test(`${id} delivery reduces bytes without changing any decoded pixels or crop`, async () => {
     const photo = MEMORY_PHOTOS.find(item => item.id === id);

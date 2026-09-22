@@ -258,3 +258,25 @@ Greenland sailboat, Kálfeyri, Santorini, and Osaka Castle. All five reached
 UNFOLDED (progress 1000) with the orbit control enabled. The browser error log
 was empty. These checks validate operation with locally available/background-
 loaded assets; they do not establish cold-network model-load times.
+
+## Cold-load correctness correction
+
+This supersedes the earlier unrestricted partial-gallery readiness policy. An
+out-of-order photo previously became the cover fallback while the requested
+index/title/scene continued advancing. A missing second image could therefore
+show unrelated content. Tests now reproduce first-photo out-of-order completion,
+an interrupted photo sequence, and stale input after a delayed arrival.
+
+All five photo URLs preload directly from HTML (first high priority, others low),
+using anonymous CORS consistently with TextureLoader and the initial cover image.
+The gallery keeps the first photo selected and allows travel only through the
+contiguous ready prefix. Missing images are never replaced by another photograph;
+blocked input is not queued. Loaded/total counts are shown while waiting, and
+unavailable navigation choices are disabled. Model preparation remains separate.
+
+A no-store local preview deliberately held the second photo while the other four
+completed. The UI showed 4/5 loaded, stayed at lighthouse, and rejected an End-key
+jump. Releasing the photo enabled navigation without automatically advancing;
+the next manual action reached the sailboat with matching title/index. No browser
+errors were recorded. Production still had only one image preload when checked;
+this is not a claim that the reported eight-second initial device wait is solved.

@@ -24,6 +24,12 @@ test('photo navigation remains available during a partial transfer and scene loa
     };
     const render = overrides => renderToStaticMarkup(React.createElement(Experience, { ...props, ...overrides }));
     const html = render();
+    const partialCollection = render({ coverPhoto: { ready: true, photoReady: true, availableCount: 1, loadedCount: 2, totalCount: 5, index: 0, busy: false },
+      photoJourney: { position: 1, frame: samplePhotoJourney(1, 5), availableCount: 1 } });
+    assert.match(partialCollection, /data-browsing="true"/);
+    assert.match(partialCollection, /Loading photographs 2 \/ 5/);
+    assert.match(partialCollection, /<button[^>]*aria-label="Next photograph"[^>]*disabled/);
+    assert.doesNotMatch(partialCollection, /Preparing your photograph/);
     const waitingPhoto = render({ coverPhoto: { ready: true, photoReady: false, index: 2, busy: true } });
     assert.match(waitingPhoto, /data-browsing="true"/, 'a missing selected photo never locks navigation');
     assert.match(waitingPhoto, /Loading this photograph/);
