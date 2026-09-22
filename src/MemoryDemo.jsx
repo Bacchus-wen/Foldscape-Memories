@@ -4,6 +4,7 @@ import { FoldablePhone, PhoneDevice, useFoldablePhone } from './iphone-duo'
 import { openingAngleToProgress, progressToOpeningAngle } from './iphone-duo/fold-choreography'
 import { getDemoLoop } from './iphone-duo/diorama/demo-playback'
 import './memory-demo.css'
+import deliveryAssets from './delivery-assets'
 
 const PHOTO = '/scenes/lighthouse/reference.jpg'
 const PAGE = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1120"><rect width="1600" height="1120" fill="#e9e4d8"/></svg>')
@@ -95,7 +96,7 @@ function Experience() {
         <div className="stage-label"><span className="stage-dot"/> INTERACTIVE EDITION <span className="stage-number">001</span></div>
         <div className="memory-device-area">
           {error ? <p className="memory-error">照片加载失败，请刷新页面重试。</p> : cover ? <PhoneDevice
-            diorama modelSrc="/assets/iphone-duo/iphone-duo.gltf" screenSrc={PAGE} coverSrc={cover}
+            diorama modelSrc={deliveryAssets.device} screenSrc={PAGE} coverSrc={cover}
             depthEnabled={false} foldEffects={false} foldProjection={false} blur={0} parallax={0}
             rotationX={-6 - opening*46 + rotation.x} rotation={-10 - opening*6 + rotation.y} rotationZ={rotation.z}
             zoom={zoom} exposure={1.05} finish={finish} dragToRotate

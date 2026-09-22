@@ -2,6 +2,8 @@ import { Group, Mesh, PointLight, Texture, type Object3D, type Material, type Bu
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { createSpreadLayout } from './spread-layout.ts'
 import { createSpreadLayoutAsync } from './spread-async.js'
+import deliveryAssets from '../../delivery-assets.js'
+import { createSceneDownloads } from './scene-downloads.js'
 
 function assetDisposer(scene: Object3D) {
   const geometries = new Set<BufferGeometry>()
@@ -89,14 +91,19 @@ export function prepareLighthouseAsset(scene: Object3D, sceneId?: string, buildS
   return spread instanceof Promise ? spread.then(finish, error => { disposeResources(); throw error }) : finish(spread)
 }
 
-export async function loadLighthouseAsset(sceneId = 'lighthouse') {
-  const paths: Record<string, string> = {
-    lighthouse: '/scenes/lighthouse/lighthouse-memory-v2.glb',
-    iceberg: '/scenes/iceberg/iceberg-memory.glb',
-    'coastal-house': '/scenes/coastal-house/coastal-house-memory.glb',
-    santorini: '/scenes/santorini/santorini-memory.glb',
-    'osaka-castle': '/scenes/osaka-castle/osaka-castle-memory.glb',
-  }
-  const gltf = await new GLTFLoader().loadAsync(paths[sceneId] ?? paths.lighthouse)
-  return prepareLighthouseAsset(gltf.scene, sceneId, createSpreadLayoutAsync)
+export function createMemoryDownloads() {
+  const { device, ...scenes } = deliveryAssets
+  return createSceneDownloads(scenes)
+}
+
+export async function loadLighthouseAsset(sceneId = 'lighthouse', downloads?: ReturnType<typeof createMemoryDownloads>) {
+  const paths: Record<string, string> = deliveryAssets
+  const id = sceneId !== 'device' && paths[sceneId] ? sceneId : 'lighthouse'
+  const loader = new GLTFLoader()
+  // Delivery GLBs are self-contained; each parse owns its geometry/textures,
+  // while the downloaded bytes remain available for later visits.
+  const gltf = downloads
+    ? await loader.parseAsync(await downloads.load(id), '')
+    : await loader.loadAsync(paths[id])
+  return prepareLighthouseAsset(gltf.scene, id, createSpreadLayoutAsync)
 }

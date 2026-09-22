@@ -3,10 +3,11 @@ import { createPageAnchors } from './page-anchors'
 import { createLighthouseGeometry } from './lighthouse-geometry'
 import { createScreenPortal } from './screen-portal'
 import { createSceneEnvironment } from './scene-environment'
-import { loadLighthouseAsset } from './lighthouse-asset'
+import { loadLighthouseAsset, createMemoryDownloads } from './lighthouse-asset'
 import { MEMORY_REFLECTION_LAYER } from './coastal-water'
 
 export function createLighthouse(screen: SkinnedMesh, host: Object3D, onAssetState?: (state: 'ready' | 'fallback') => void) {
+  const downloads = createMemoryDownloads()
   const anchors = createPageAnchors(screen, host)
   const sceneAnchors = createPageAnchors(screen, host, true)
   const resolution = typeof window !== 'undefined' && window.innerWidth < 700 ? 512 : 1024
@@ -40,7 +41,7 @@ export function createLighthouse(screen: SkinnedMesh, host: Object3D, onAssetSta
   const selectScene = (sceneId = 'lighthouse') => {
     const version = ++request
     if (geometry) geometry.left.visible = geometry.right.visible = false
-    return loadLighthouseAsset(sceneId).then(asset => {
+    return loadLighthouseAsset(sceneId, downloads).then(asset => {
     if (version !== request || disposed) { asset.dispose(); return false }
     environment.dispose()
     environment = createSceneEnvironment(anchors.left, anchors.right, sceneId, resolution, screen)
@@ -50,6 +51,7 @@ export function createLighthouse(screen: SkinnedMesh, host: Object3D, onAssetSta
     // compiles its water, shadows and all model materials during photo browsing.
     update(pose.progress, pose.time, pose.motion)
     onAssetState?.('ready')
+    downloads.startBackground()
     return true
   }).catch(error => {
     if (disposed || version !== request) return false
@@ -58,6 +60,7 @@ export function createLighthouse(screen: SkinnedMesh, host: Object3D, onAssetSta
     update(pose.progress, pose.time, pose.motion)
     console.warn('Lighthouse asset unavailable; keeping procedural scene.', error)
     onAssetState?.('fallback')
+    downloads.startBackground()
     return false
   })
   }
@@ -81,6 +84,7 @@ export function createLighthouse(screen: SkinnedMesh, host: Object3D, onAssetSta
   const ready = selectScene()
   return {
     ready, selectScene, update,
-    dispose() { disposed = true; environment.dispose(); portal?.dispose(); geometry?.dispose(); anchors.dispose(); sceneAnchors.dispose() },
+    prioritizeScene(id: string) { void downloads.load(id).catch(() => {}) },
+    dispose() { disposed = true; downloads.dispose(); environment.dispose(); portal?.dispose(); geometry?.dispose(); anchors.dispose(); sceneAnchors.dispose() },
   }
 }

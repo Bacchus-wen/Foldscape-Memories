@@ -4,6 +4,7 @@ import { POSES } from "./iphone-duo/poses";
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import { FoldablePhone, PhoneDevice } from "./iphone-duo";
 import { MEMORY_PHOTOS } from "./iphone-duo/memory-photos";
+import deliveryAssets from './delivery-assets';
 import MemoryExperience from "./components/MemoryExperience";
 import { usePhotoJourney } from "./iphone-duo/use-photo-journey";
 import { createMemoryPlayback } from "./iphone-duo/diorama/memory-playback";
@@ -373,7 +374,7 @@ export function App() {
             sceneMotion={livingScene && !overlayOpen}
             interactionEpoch={interactionEpoch}
             onReadyChange={setDeviceReady}
-            modelSrc="/assets/iphone-duo/iphone-duo.gltf"
+            modelSrc={deliveryAssets.device}
             screenSrc={SEA_SCREEN}
             coverSrc={lighthousePhoto.cover || undefined}
             coverPhotoPosition={isMemory ? photoJourney.motionPosition : undefined}

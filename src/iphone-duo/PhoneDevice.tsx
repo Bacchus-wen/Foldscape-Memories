@@ -141,6 +141,8 @@ function PhoneDeviceSurface({ onCoverOpen, homeScale = 1, homeInspection, homeWh
     loadedScene.current = memorySceneId
     onSceneReadyChange?.(false)
     const current = surface.current
+    // Start the selected download immediately, even while old shaders finish.
+    current.diorama!.prioritizeScene(memorySceneId)
     // Photo input is already live. Keep the preparing model's materials alive
     // until compileAsync releases them, then mount only the latest selection.
     const select = async () => {
