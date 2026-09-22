@@ -176,3 +176,19 @@ is allowed to enter; the CSS entrance still animates afterward. This telemetry
 distinguishes transfer, decoding/setup and reveal gating on the next deployment.
 No five-second end-to-end or visual browser verification is claimed until the
 new production deployment can be measured.
+
+## Photo browsing readiness
+
+The cover previously awaited all five photo textures before reporting ready.
+This could leave the already-visible device and first photograph locked behind
+"Preparing your photograph…" while later PNGs were still downloading.
+Readiness now follows the first usable texture; remaining photographs attach
+independently. A pending selected photo reports its own loading state and blocks
+only opening that memory, not browsing. Failed later photos do not disable the
+collection. Model warmup remains a separate condition for unfolding.
+
+At viewport heights below 740px, the entrance device stage now accepts wheel
+input even while the smaller drag hint is hidden. Native scrolling outside the
+stage and browser zoom gestures are preserved. Deferred-image regression tests
+cover first-photo readiness, pending warmup, partial failure, and disposal; UI
+tests cover pending-photo navigation and the small-window wheel rule.

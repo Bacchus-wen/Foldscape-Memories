@@ -10,6 +10,10 @@ import { MEMORY_PHOTOS } from '../iphone-duo/memory-photos';
 import { samplePhotoJourney } from '../iphone-duo/photo-journey';
 gsap.registerPlugin(Observer);
 
+export function ignorePhotoWheel(event, height) {
+  return event.ctrlKey || (height < 740 && !event.target.closest?.('.memory-stage, .memory-photo-gesture'));
+}
+
 function MemoryDialog({ open, onClose, title, className = '', children }) {
   const ref = useRef(null);
   const controls = useAnimationControls();
@@ -58,9 +62,9 @@ export default function MemoryExperience({ children, photoJourney, inspectingDev
   const collectionOpacity = useTransform(reveal, value => Math.max(0, (value - .45) / .55));
   const collectionY = useTransform(reveal, value => 12 * (1 - value));
   const photo = MEMORY_PHOTOS[coverPhoto.index];
-  const canRequestOpen = phase === 'cover' && coverPhoto.ready && photo.scene;
+  const canRequestOpen = phase === 'cover' && coverPhoto.ready && coverPhoto.photoReady !== false && photo.scene;
   const playLabel = pendingPhotoOpen || (!ready && !canRequestOpen) ? 'Preparing memory' : playing ? (rewinding ? 'Pause rewind' : 'Pause memory') : phase === 'paused' ? (rewinding ? 'Continue rewind' : 'Continue memory') : exploring ? 'Rewind' : 'Open memory';
-  const status = error || (pendingPhotoOpen ? `Preparing ${photo.title} to unfold…` : !ready && !canRequestOpen ? 'Preparing your photograph…' : isReturning ? 'Returning to your photograph' : playing ? (rewinding ? 'A place, held in a photograph.' : 'A moment, unfolding.') : phase === 'paused' ? 'Take a breath. Continue when you’re ready.' : exploring ? 'Drag to look around · Scroll or pinch to zoom' : coverPhoto.busy ? 'Another moment comes into view.' : 'A photograph is only the beginning.');
+  const status = error || (pendingPhotoOpen ? `Preparing ${photo.title} to unfold…` : coverPhoto.ready && coverPhoto.photoReady === false ? 'Loading this photograph… You can keep browsing.' : !ready && !canRequestOpen ? 'Preparing your photograph…' : isReturning ? 'Returning to your photograph' : playing ? (rewinding ? 'A place, held in a photograph.' : 'A moment, unfolding.') : phase === 'paused' ? 'Take a breath. Continue when you’re ready.' : exploring ? 'Drag to look around · Scroll or pinch to zoom' : coverPhoto.busy ? 'Another moment comes into view.' : 'A photograph is only the beginning.');
   useEffect(() => { onOverlayChange(Boolean(panel)); }, [panel, onOverlayChange]);
   // Playback readiness includes !coverPhoto.busy and 3D asset loading. Using it
   // here disables the very gesture needed to finish a fractional photo transfer.
@@ -76,7 +80,7 @@ export default function MemoryExperience({ children, photoJourney, inspectingDev
     const observer = Observer.create({
       id: 'memory-gallery-wheel', target: element, type: 'wheel', preventDefault: true,
       ignore: 'dialog, input, select, textarea, .memory-view-wheel',
-      ignoreCheck: event => event.ctrlKey || (window.innerHeight < 740 && !event.target.closest('.memory-photo-gesture')),
+      ignoreCheck: event => ignorePhotoWheel(event, window.innerHeight),
       onChange: scrollPhotographs,
     });
     element.dataset.inputDriver = 'gsap-observer';

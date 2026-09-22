@@ -11,7 +11,11 @@ test('photo navigation remains available during a partial transfer and scene loa
     optimizeDeps: { noDiscovery: true, include: [] },
     server: { middlewareMode: true, ws: false }, ssr: { noExternal: ['gsap'] } });
   try {
-    const { default: Experience } = await server.ssrLoadModule('/src/components/MemoryExperience.jsx');
+    const { default: Experience, ignorePhotoWheel } = await server.ssrLoadModule('/src/components/MemoryExperience.jsx');
+    const stageEvent = { ctrlKey: false, target: { closest: selector => selector.includes('.memory-stage') ? {} : null } };
+    assert.equal(ignorePhotoWheel(stageEvent, 600), false, 'small-window entrance accepts scrolling over the device stage');
+    assert.equal(ignorePhotoWheel({ ...stageEvent, ctrlKey: true }, 600), true, 'browser zoom is preserved');
+    assert.equal(ignorePhotoWheel({ ctrlKey: false, target: { closest: () => null } }, 600), true, 'outside the stage retains native small-window scrolling');
     const props = {
       ready: false, phase: 'cover', fold: 0, progress: 0, photoCoverView: true,
       coverPhoto: { ready: true, index: 0, busy: true },
@@ -20,6 +24,10 @@ test('photo navigation remains available during a partial transfer and scene loa
     };
     const render = overrides => renderToStaticMarkup(React.createElement(Experience, { ...props, ...overrides }));
     const html = render();
+    const waitingPhoto = render({ coverPhoto: { ready: true, photoReady: false, index: 2, busy: true } });
+    assert.match(waitingPhoto, /data-browsing="true"/, 'a missing selected photo never locks navigation');
+    assert.match(waitingPhoto, /Loading this photograph/);
+    assert.match(waitingPhoto, /class="memory-primary"[^>]*disabled/, 'an unavailable photo cannot open the wrong memory');
     assert.match(html, /aria-label="Switch device to Night Sky"/);
     assert.doesNotMatch(html, /View &amp; device|memory-tools-dialog|memory-finish-dialog/);
     assert.match(html, /role="listbox"[^>]*aria-label="Viewpoint"/);

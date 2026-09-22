@@ -19,7 +19,7 @@ export function createMorphUniforms() {
 }
 
 export function createCoverMorph({ material, photos, draw, element, onState, scene, coverMesh, warmup }) {
-  const uniforms = material.uniforms, textures = new Map();
+  const uniforms = material.uniforms, textures = new Map(), failed = new Set();
   const bounds = new Vector4(), point = new Vector3();
   let gallery, disposed = false, loaded = false, prepared = false, position = 0, visible = false, retraction = 0, previousState = '';
   const report = state => { if (!disposed) onState(state); };
@@ -32,8 +32,11 @@ export function createCoverMorph({ material, photos, draw, element, onState, sce
   const syncFrame = () => {
     if (!loaded) return;
     const frame = samplePhotoJourney(position, photos.length);
-    bind('Current', frame.current); bind('Next', frame.next);
-    uniforms.uProgress.value = frame.transfer;
+    const fallback = textures.has(frame.index) ? frame.index : textures.keys().next().value;
+    const current = textures.has(frame.current) ? frame.current : fallback;
+    const next = textures.has(frame.next) ? frame.next : current;
+    bind('Current', current); bind('Next', next);
+    uniforms.uProgress.value = current === next ? 0 : frame.transfer;
     // The original shader is driven by the reversible travel clock instead of
     // wall time, keeping the same image and warp when the user scrubs back.
     uniforms.uTime.value = frame.cursor * MORPH_SETTINGS.duration;
@@ -46,36 +49,47 @@ export function createCoverMorph({ material, photos, draw, element, onState, sce
         photoGallery: 'react-bits-circular-gallery-three', photoGap: '20', photoCardScale: '2',
       });
     }
-    const state = { ready: true, prepared, index: frame.index, target: frame.next, busy: frame.busy, error: '' };
+    const photoReady = textures.has(frame.index);
+    const state = { ready: true, prepared, photoReady, loadedCount: textures.size, totalCount: photos.length,
+      index: frame.index, target: frame.next, busy: frame.busy || !photoReady,
+      error: failed.has(frame.index) ? 'This photograph could not load. You can still browse the other memories.' : '' };
     const key = JSON.stringify(state);
     if (key !== previousState) { previousState = key; report(state); }
     draw();
   };
-  report({ ready: false, prepared: false, index: 0, target: 0, busy: false, error: '' });
+  report({ ready: false, prepared: false, photoReady: false, loadedCount: 0, totalCount: photos.length, index: 0, target: 0, busy: false, error: '' });
   const loader = new TextureLoader();
-  Promise.all(photos.map(async (photo, index) => {
-    const texture = await loader.loadAsync(photo.image);
+  const prepare = async () => {
+    try { await warmup(); }
+    catch (error) { if (!disposed) console.warn('Scene preparation deferred to first render.', error); }
+    if (disposed) return;
+    prepared = true;
+    syncFrame();
+  };
+  // Each photo completes independently: the first ready one enables browsing.
+  // Slow or failed later photos must never hold the entrance behind Promise.all.
+  photos.forEach((photo, index) => { void loader.loadAsync(photo.image).then(texture => {
     if (disposed) { texture.dispose(); return; }
     texture.colorSpace = NoColorSpace;
     texture.flipY = true;
     texture.generateMipmaps = false;
     texture.minFilter = texture.magFilter = LinearFilter;
     textures.set(index, texture);
-  })).then(async () => {
-    if (disposed) return;
-    uniforms.morphEnabled.value = 1;
-    bind('Current', 0); bind('Next', 1);
-    gallery = new CircularGallery({ scene, photos, textures, element });
-    loaded = true;
+    if (!loaded) {
+      uniforms.morphEnabled.value = 1;
+      gallery = new CircularGallery({ scene, photos, textures, element });
+      loaded = true;
+      syncFrame();
+      void prepare();
+    } else gallery.setTexture(index, texture);
     syncFrame();
-    // Browsing is ready as soon as its textures are ready. GPU preparation only
-    // gates unfolding, and must not disable the photograph's wheel/drag input.
-    try { await warmup(); }
-    catch (error) { if (!disposed) console.warn('Scene preparation deferred to first render.', error); }
+  }).catch(() => {
     if (disposed) return;
-    prepared = true;
-    syncFrame();
-  }).catch(() => report({ ready: false, index: 0, target: 0, busy: false, error: 'Some photographs could not load. Reload to try again.' }));
+    failed.add(index);
+    if (loaded) syncFrame();
+    else report({ ready: false, prepared: false, photoReady: false, index: 0, target: 0, busy: false,
+      error: 'A photograph could not load. Other photographs are still loading.' });
+  }); });
   return {
     seek(value) { position = value; syncFrame(); },
     project(camera) {

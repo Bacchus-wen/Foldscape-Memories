@@ -134,7 +134,7 @@ class Media {
       depthTest: true, depthWrite: false, side: DoubleSide, toneMapped: false,
       uniforms: {
         tMap: { value: texture }, uCrop: { value: new Vector4(...crop) },
-        uImageSizes: { value: new Vector2(texture.image.width * crop[2], texture.image.height * crop[3]) },
+        uImageSizes: { value: new Vector2((texture?.image.width ?? 1) * crop[2], (texture?.image.height ?? 1) * crop[3]) },
         uPlaneSizes: { value: new Vector2(1.446, 1) }, uBorderRadius: { value: .025 },
         uTime: { value: 0 }, uSpeed: { value: 0 }, uStretch: { value: 0 }, uEdge: { value: 0 }, uContact: { value: 0 },
         uReduce: { value: 0 }, uOpacity: { value: 0 }, uDepth: { value: 0 },
@@ -143,6 +143,7 @@ class Media {
     });
     this.plane = new Mesh(geometry, this.program);
     this.plane.frustumCulled = false;
+    this.plane.visible = Boolean(texture);
   }
   update(frame, index, aspect, reduced, retraction = 0) {
     const card = photoPlacement(index, frame);
@@ -182,6 +183,12 @@ export default class CircularGallery {
     this.medias.forEach(media => this.root.add(media.plane));
     scene.add(this.root);
     this.root.visible = false;
+  }
+  setTexture(index, texture) {
+    const media = this.medias[index], uniforms = media.program.uniforms, crop = uniforms.uCrop.value;
+    uniforms.tMap.value = texture;
+    uniforms.uImageSizes.value.set(texture.image.width * crop.z, texture.image.height * crop.w);
+    media.plane.visible = true;
   }
   update(frame, visible, reduced, retraction = 0) {
     this.frame = frame;
