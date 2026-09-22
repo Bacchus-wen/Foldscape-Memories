@@ -3,6 +3,15 @@ import path from 'node:path'
 import { createHash } from 'node:crypto'
 import { gzipSync, brotliCompressSync, constants } from 'node:zlib'
 import sharp from 'sharp'
+import { pathToFileURL } from 'node:url'
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js'
+import { bakePhoneCenters } from './bake-phone-centers.mjs'
+import { encodePhoneView } from './encode-phone-view.mjs'
+
+const encoderPath = process.argv.find(arg => arg.startsWith('--encoder='))?.slice(10) ?? process.env.MESHOPT_ENCODER
+if (!encoderPath) throw new Error('Pass --encoder=/path/to/meshoptimizer/meshopt_encoder.module.js (version 0.25.0)')
+const { MeshoptEncoder } = await import(pathToFileURL(path.resolve(encoderPath)).href)
+await Promise.all([MeshoptEncoder.ready, MeshoptDecoder.ready])
 
 // Keep authoring assets intact. Only encode smaller, pixel-identical textures;
 // geometry, animation, UVs, material settings and image dimensions are retained.
@@ -24,6 +33,10 @@ for (const [id, relative] of Object.entries(sources)) {
   const jsonLength = packed ? original.readUInt32LE(12) : 0
   const data = JSON.parse(packed ? original.subarray(20, 20 + jsonLength).toString() : original.toString())
   const bin = packed ? original.subarray(28 + jsonLength) : await fs.readFile(path.join(path.dirname(file), data.buffers[0].uri))
+  if (id === 'device') {
+    const scene = data.scenes[data.scene ?? 0]
+    scene.extras = { ...scene.extras, foldCenterSamples: await bakePhoneCenters(data, bin) }
+  }
   const replacements = new Map()
   let inputBytes = packed ? original.length : original.length + bin.length
   for (let index = 0; index < (data.images?.length ?? 0); index++) {
@@ -58,16 +71,28 @@ for (const [id, relative] of Object.entries(sources)) {
     }
     replacements.set(image.bufferView, bytes)
   }
-  const parts = []; let offset = 0
+  const parts = []; let offset = 0, fallbackOffset = 0
   for (let index = 0; index < data.bufferViews.length; index++) {
     const view = data.bufferViews[index]
-    const bytes = replacements.get(index) ?? bin.subarray(view.byteOffset ?? 0, (view.byteOffset ?? 0) + view.byteLength)
+    const originalBytes = replacements.get(index) ?? bin.subarray(view.byteOffset ?? 0, (view.byteOffset ?? 0) + view.byteLength)
+    const compressed = id === 'device' ? encodePhoneView(data, index, originalBytes, MeshoptEncoder, MeshoptDecoder) : null
+    const bytes = compressed?.bytes ?? originalBytes
     const padded = Buffer.alloc(Math.ceil(bytes.length / 4) * 4)
     bytes.copy(padded); parts.push(padded)
-    view.byteOffset = offset; view.byteLength = bytes.length; view.buffer = 0
+    if (compressed) {
+      view.byteOffset = fallbackOffset; view.byteLength = originalBytes.length; view.buffer = 1
+      const { bytes: encoded, ...encoding } = compressed
+      view.extensions = { ...view.extensions, EXT_meshopt_compression: { buffer: 0, byteOffset: offset, byteLength: encoded.length, ...encoding } }
+      fallbackOffset += Math.ceil(originalBytes.length / 4) * 4
+    } else { view.byteOffset = offset; view.byteLength = bytes.length; view.buffer = 0 }
     offset += padded.length
   }
   data.buffers = [{ byteLength: offset }]
+  if (fallbackOffset) {
+    data.buffers.push({ byteLength: fallbackOffset, extensions: { EXT_meshopt_compression: { fallback: true } } })
+    data.extensionsUsed = [...new Set([...(data.extensionsUsed ?? []), 'EXT_meshopt_compression'])]
+    data.extensionsRequired = [...new Set([...(data.extensionsRequired ?? []), 'EXT_meshopt_compression'])]
+  }
   const json = Buffer.from(JSON.stringify(data)), jsonChunk = Buffer.alloc(Math.ceil(json.length / 4) * 4, 32)
   json.copy(jsonChunk)
   const header = Buffer.alloc(20), binHeader = Buffer.alloc(8)
@@ -90,7 +115,7 @@ for (const [id, relative] of Object.entries(sources)) {
 await fs.writeFile(path.join(root, 'src/delivery-assets.json'), JSON.stringify(urls, null, 2) + '\n')
 const htmlFile = path.join(root, 'index.html')
 let html = await fs.readFile(htmlFile, 'utf8')
-html = html.replace(/    <link rel="preload" href="\/delivery\/[^\"]+" as="fetch" crossorigin \/>\n?/g, '')
-html = html.replace('    <title>', `    <link rel="preload" href="${urls.device}" as="fetch" crossorigin />\n    <title>`)
+html = html.replace(/    <link rel="preload" href="\/delivery\/[^\"]+" as="fetch"[^>]*>\n?/g, '')
+html = html.replace('    <title>', `    <link rel="preload" href="${urls.device}" as="fetch" crossorigin fetchpriority="high" />\n    <title>`)
 await fs.writeFile(htmlFile, html)
 console.table(report)

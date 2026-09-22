@@ -165,6 +165,9 @@ function PhoneDeviceSurface({ onCoverOpen, homeScale = 1, homeInspection, homeWh
     return () => { cancelled = true; window.clearTimeout(timer) }
   }, [ready, memorySceneId])
   const [entered, setEntered] = useState(false)
+  useEffect(() => {
+    if (entered && canvas.current) canvas.current.dataset.deviceVisibleMs = performance.now().toFixed(0)
+  }, [entered])
   const coverMorph = useRef<ReturnType<typeof createCoverMorph> | null>(null)
   const frameTop = useRef(0)
   const hasCoverMorph = coverPhotoPosition !== undefined
@@ -328,6 +331,9 @@ function PhoneDeviceSurface({ onCoverOpen, homeScale = 1, homeInspection, homeWh
     const context = element.getContext('webgl2', { alpha: true, antialias: true, preserveDrawingBuffer: true })
     if (!context) { setStatusKey('webgl'); return }
     const renderer = new WebGLRenderer({ canvas: element, context, alpha: true, antialias: true, preserveDrawingBuffer: true })
+    const phoneRequest = loadPhone(modelSrc, (phase, ms) => {
+      element.dataset[`device${phase[0].toUpperCase()}${phase.slice(1)}Ms`] = ms.toFixed(0)
+    })
     renderer.localClippingEnabled = true
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.toneMapping = ACESFilmicToneMapping
@@ -387,6 +393,7 @@ function PhoneDeviceSurface({ onCoverOpen, homeScale = 1, homeInspection, homeWh
       coverMorph.current?.project(camera)
       const projected = performance.now()
       renderer.render(scene, camera)
+      if (model && !element.dataset.deviceFirstFrameMs) element.dataset.deviceFirstFrameMs = performance.now().toFixed(0)
       const renderMs = performance.now() - before
       if (renderMs > renderPeak) {
         renderPeak = renderMs
@@ -444,7 +451,7 @@ function PhoneDeviceSurface({ onCoverOpen, homeScale = 1, homeInspection, homeWh
     const observer = new ResizeObserver(resize)
     observer.observe(element)
     const unsubscribe = progress.on('change', () => update())
-    loadPhone(modelSrc).then(loaded => {
+    phoneRequest.then(loaded => {
       if (disposed) { loaded.dispose(); return }
       model = loaded
       scene.add(model.body)

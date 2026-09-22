@@ -45,7 +45,8 @@ not explain a 10-second download on its own.
 | Santorini | 6,806,156 | 6,806,156 | 5,402,464 |
 | Osaka Castle | 8,429,744 | 8,429,744 | 7,021,583 |
 
-Regenerate with `npm run assets:delivery` after changing authoring models.
+Regenerate after changing authoring models with `npm run assets:delivery -- --encoder=/path/to/meshoptimizer/meshopt_encoder.module.js` (Meshoptimizer 0.25.0).
+On the development machine this tool is installed under `F:/工具/foldscape-performance/node_modules/meshoptimizer/`.
 Build with `npm run build`. Publish the matching HTML, JS, delivery GLBs and
 gzip sidecars together. Do not delete old hashed files while cached HTML/JS
 may still reference them. Include `npm run test:delivery` in validation.
@@ -135,3 +136,43 @@ Validation includes queue/retry/disposal tests and an HTTP test serving all five
 real delivery assets. Every scene is fetched once and repeated loads return the
 same byte buffer without further HTTP requests. Browser timing remains pending
 because the automation connection is unavailable.
+
+## Vercel homepage follow-up
+
+The supplied site https://foldscape-memories.vercel.app/ serves the expected
+`index-Cmc5pIvY.js` build and preloads the packed device. Contrary to the earlier
+company-host samples, Vercel DOES apply Brotli to the GLB response. One decoded
+fetch took 10.11 s; a separate raw HTTP sample transferred 2,098,646 bytes in
+7.18 s (TTFB 0.90 s). These are network samples, not first-visible timings.
+The sampled edge was sfo1 and reported HIT. Device responses used max-age=0
+with revalidation. Merely adding precompressed files did not guarantee a
+five-second entrance. Download speed varied across requests.
+
+The new device uses EXT_meshopt_compression with no quantization, filters,
+reordering or triangle rotation. Every decoded buffer is compared byte-for-byte
+with the source. The Three.js decoder is already supplied by the existing Three
+dependency; the build-only encoder was downloaded to F:/工具 as requested.
+
+| Device encoding | Previous | New |
+| --- | ---: | ---: |
+| GLB bytes | 4,762,092 | 2,407,684 |
+| Gzip sidecar bytes | 2,148,123 | 1,788,253 |
+| Brotli sidecar bytes | 1,854,193 | 1,707,076 |
+
+25 precise fold-center samples are now baked into the asset instead of being
+calculated on each visit. Tests compare all samples and skinned screen vertices
+against the original rig at every sampled pose. Other models retain their exact
+previous delivery files. Original files remain available for cached clients.
+
+The device request starts before environment-map preparation, and the HTML
+preload now explicitly requests high priority. Vercel receives immutable cache
+headers only for content-hashed /delivery/ assets; index.html is unaffected.
+This cache policy helps revisits, not a visitor's first download.
+
+The device canvas exposes data-device-download-ms, data-device-parse-ms and
+data-device-setup-ms durations, plus data-device-first-frame-ms and
+data-device-visible-ms measured since navigation. Visible marks when the canvas
+is allowed to enter; the CSS entrance still animates afterward. This telemetry
+distinguishes transfer, decoding/setup and reveal gating on the next deployment.
+No five-second end-to-end or visual browser verification is claimed until the
+new production deployment can be measured.

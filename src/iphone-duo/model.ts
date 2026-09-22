@@ -1,10 +1,17 @@
-import { AnimationMixer, Box3, Group, Material, Mesh, MeshStandardMaterial, Texture, Vector3 } from 'three'
+import { AnimationMixer, Box3, FileLoader, Group, LoaderUtils, Material, Mesh, MeshStandardMaterial, Texture, Vector3 } from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js'
 import { createScreenMaterial } from './screen-material'
 import { fillRearPanelOpenings } from './rear-panel'
 
-export async function loadPhone(url: string) {
-  const source = await new GLTFLoader().loadAsync(url)
+export async function loadPhone(url: string, onTiming?: (phase: 'download' | 'parse' | 'setup', ms: number) => void) {
+  const started = performance.now()
+  const bytes = await new FileLoader().setResponseType('arraybuffer').loadAsync(url) as ArrayBuffer
+  const downloaded = performance.now()
+  onTiming?.('download', downloaded - started)
+  const source = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(bytes, LoaderUtils.extractUrlBase(url))
+  const parsed = performance.now()
+  onTiming?.('parse', parsed - downloaded)
   // Apple authors the rig in XZ; normalize once, outside the animated skeleton.
   const body = new Group()
   const displayFrame = new Group()
@@ -112,12 +119,14 @@ export async function loadPhone(url: string) {
   // enough to cause visible pose-transition judder. Sample the model's local
   // center once, then interpolate that stable curve while folding.
   const centerBounds = new Box3()
-  const centerSamples: Vector3[] = []
   const centerSampleCount = 24
+  const bakedCenters = source.scene.userData.foldCenterSamples
+  const centerSamples: Vector3[] = Array.isArray(bakedCenters) && bakedCenters.length === centerSampleCount + 1
+    ? bakedCenters.map(sample => new Vector3().fromArray(sample)) : []
   body.position.set(0, 0, 0)
   body.rotation.set(0, 0, 0)
   displayFrame.position.set(0, 0, 0)
-  for (let index = 0; index <= centerSampleCount; index += 1) {
+  if (!centerSamples.length) for (let index = 0; index <= centerSampleCount; index += 1) {
     const progress = index / centerSampleCount
     applyFold(progress, (1 - progress) * Math.PI)
     displayFrame.position.set(0, 0, 0)
@@ -142,6 +151,7 @@ export async function loadPhone(url: string) {
 
   setFold(0, Math.PI)
   const pivotCenter = new Box3().setFromObject(displayFrame).getCenter(new Vector3())
+  onTiming?.('setup', performance.now() - parsed)
   return { body, displayFrame, screen, cover, setFold, pivotCenter, sourceKind: slider ? 'apple-gltf' : 'processed-glb', finishMaterials: [...finishMaterials], backMaterials: [...backMaterials], cameraIslandMaterials: [...cameraIslandMaterials], cameraRingMaterials: [...cameraRingMaterials], sensorMaterials: [...sensorMaterials], innerGlassMaterials: [...innerGlassMaterials], dispose() {
     mixer?.stopAllAction()
     mixer?.uncacheRoot(body)
