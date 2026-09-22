@@ -367,6 +367,10 @@ function PhoneDeviceSurface({ onCoverOpen, homeScale = 1, homeInspection, homeWh
     if (diorama) scene.traverse(object => { if ('isLight' in object) object.layers.enable(MEMORY_REFLECTION_LAYER) })
     let disposed = false
     let model: PhoneModel | undefined
+    let deviceCompilation: Promise<void> | undefined
+    let deviceCompiled = false
+    let finishDeviceFrame: () => void
+    const deviceFrame = new Promise<void>(resolve => { finishDeviceFrame = resolve })
     renderer.info.autoReset = false
     let drawFrame = 0
     const frameReady = createFrameBudget(60)
@@ -378,6 +382,23 @@ function PhoneDeviceSurface({ onCoverOpen, homeScale = 1, homeInspection, homeWh
     let renderPeak = 0, renderStalls = 0
     const renderNow = () => {
       drawFrame = 0
+      if (disposed) return
+      // Start shader compilation without forcing the first draw to synchronously
+      // wait for every device material. Keep the same scene and material quality.
+      if (model && !deviceCompiled) {
+        if (!deviceCompilation) {
+          const started = performance.now()
+          deviceCompilation = renderer.compileAsync(scene, camera).then(() => {
+            element.dataset.deviceCompileMs = (performance.now() - started).toFixed(0)
+          }).catch(error => {
+            if (!disposed) console.warn('Device precompilation deferred to first draw.', error)
+          }).then(() => {
+            deviceCompiled = true
+            if (!disposed) render()
+          })
+        }
+        return
+      }
       const before = performance.now()
       if (diorama && !frameReady(before)) {
         drawFrame = requestAnimationFrame(renderNow)
@@ -393,7 +414,11 @@ function PhoneDeviceSurface({ onCoverOpen, homeScale = 1, homeInspection, homeWh
       coverMorph.current?.project(camera)
       const projected = performance.now()
       renderer.render(scene, camera)
-      if (model && !element.dataset.deviceFirstFrameMs) element.dataset.deviceFirstFrameMs = performance.now().toFixed(0)
+      if (model && !element.dataset.deviceFirstFrameMs) {
+        element.dataset.deviceFirstFrameMs = performance.now().toFixed(0)
+        element.dataset.deviceFirstDrawMs = (performance.now() - projected).toFixed(0)
+        finishDeviceFrame()
+      }
       const renderMs = performance.now() - before
       if (renderMs > renderPeak) {
         renderPeak = renderMs
@@ -461,6 +486,9 @@ function PhoneDeviceSurface({ onCoverOpen, homeScale = 1, homeInspection, homeWh
       }) : undefined
       const warmup = async () => {
         const sceneId = loadedScene.current
+        // The closed device gets the first GPU frame. Expanded-scene shaders,
+        // shadows and reflections must not compete with that initial draw.
+        await deviceFrame
         await miniature?.ready
         if (disposed) return
         const started = performance.now()
@@ -512,6 +540,7 @@ function PhoneDeviceSurface({ onCoverOpen, homeScale = 1, homeInspection, homeWh
     }).catch(() => { if (!disposed) setStatusKey('model') })
     return () => {
       disposed = true
+      finishDeviceFrame()
       cancelAnimationFrame(drawFrame)
       unsubscribe()
       observer.disconnect()
@@ -526,7 +555,7 @@ function PhoneDeviceSurface({ onCoverOpen, homeScale = 1, homeInspection, homeWh
       }
       // compileAsync still reads material properties while its GPU jobs finish.
       // Stop frames immediately, then release resources after that reader exits.
-      if (preparation.current) void preparation.current.catch(() => {}).finally(release)
+      if (preparation.current || deviceCompilation) void Promise.allSettled([preparation.current, deviceCompilation]).finally(release)
       else release()
     }
   }, [modelSrc, progress, diorama])

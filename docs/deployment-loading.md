@@ -192,3 +192,69 @@ input even while the smaller drag hint is hidden. Native scrolling outside the
 stage and browser zoom gestures are preserved. Deferred-image regression tests
 cover first-photo readiness, pending warmup, partial failure, and disposal; UI
 tests cover pending-photo navigation and the small-window wheel rule.
+
+## Lossless photograph delivery (2026-09-22)
+
+Two PNG photographs now use lossless WebP delivery copies, preserving complete
+image dimensions, every decoded RGBA pixel, crop coordinates, and original files.
+The hashed delivery names use the existing immutable cache policy.
+
+| Photograph | Original bytes | Delivery bytes | Reduction |
+| --- | ---: | ---: | ---: |
+| Iceberg / red sailboat | 1,308,539 | 706,476 | 46.0% |
+| Coastal house | 1,306,507 | 696,804 | 46.7% |
+
+Together this removes 1,211,766 bytes (46.3%) from these two image requests.
+Regenerate with npm run assets:photos. npm test includes decoded-pixel equality
+checks. The initial lighthouse photograph is preloaded from HTML, using the same
+URL as its existing consumers. No browsing state, animation, or model changed.
+
+A local in-app-browser reload reported deviceDownloadMs=670,
+deviceParseMs=152, deviceSetupMs=49, deviceVisibleMs=4991, and
+renderPeak=3420.80. This is one local sample, not a cold-cache production
+benchmark or a before/after speedup claim. First-render work remains a separate
+bottleneck to profile before changing GPU preparation. Browser checks confirmed
+entry into the collection and navigation to both optimized photographs.
+
+## Device first-frame GPU preparation
+
+The initial device draw now waits for Three.js compileAsync rather than forcing
+all device programs to finish inside render(). Expanded-scene warmup waits for
+the actual first device frame, keeping its shadow/reflection work out of the
+first-frame queue. File downloading and the authored animation remain unchanged.
+Cleanup waits for in-flight compilation before disposing its materials.
+
+Local in-app-browser samples, with cached assets/shaders (not controlled cold
+production measurements):
+
+| Sample | Download ms | First device frame ms from navigation | Reported render peak ms |
+| --- | ---: | ---: | ---: |
+| Previous code, cached comparison | 120 | 1567 | 973.8 |
+| Async compile only, first run | 116 | 1138 | 241.9 |
+| Async compile only, repeat | 662 | 2783 | 955.3 |
+| Async compile + first-frame priority | 113 | 896 | 135.6 |
+
+The repeat shows environmental variance; no fixed percentage or five-second
+production guarantee follows from these samples. The final run recorded 173ms
+async compilation and 135ms first draw. data-device-first-frame-ms marks an
+actual completed draw; data-device-visible-ms only marks CSS permission and may
+precede that draw. New data-device-first-draw-ms isolates drawing cost.
+Browser verification reached the lighthouse's UNFOLDED state with auto orbit.
+
+## Stationary cover projection cache
+
+Photo browsing recomputed all 166 skinned outer-screen vertices each frame even
+when the phone, rig and camera were unchanged. The projection now reuses exact
+bounds until any world, bind, bone, camera or projection matrix changes. Card
+animation still updates every frame. No geometry simplification is involved.
+
+The regression compares exact bounds at 25 fold/view poses and checks that ten
+unchanged frames make zero additional getVertexPosition calls. A 1,000-frame
+isolated local CPU sample took 63.17ms before and 12.98ms with caching. This is
+about 0.05ms saved per stationary frame, not a whole-page frame-rate claim.
+
+Final local browser pass: navigated in order through Round Island Light, the
+Greenland sailboat, Kálfeyri, Santorini, and Osaka Castle. All five reached
+UNFOLDED (progress 1000) with the orbit control enabled. The browser error log
+was empty. These checks validate operation with locally available/background-
+loaded assets; they do not establish cold-network model-load times.

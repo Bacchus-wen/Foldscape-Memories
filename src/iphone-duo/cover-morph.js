@@ -1,4 +1,5 @@
-import { LinearFilter, NoColorSpace, TextureLoader, Vector2, Vector3, Vector4 } from 'three';
+import { LinearFilter, NoColorSpace, TextureLoader, Vector2, Vector4 } from 'three';
+import { createCoverProjection } from './cover-projection.js';
 import CircularGallery from './react-bits/CircularGallery.js';
 import { samplePhotoJourney } from './photo-journey.js';
 import { MORPH_SETTINGS } from './memory-photos.js';
@@ -20,7 +21,7 @@ export function createMorphUniforms() {
 
 export function createCoverMorph({ material, photos, draw, element, onState, scene, coverMesh, warmup }) {
   const uniforms = material.uniforms, textures = new Map(), failed = new Set();
-  const bounds = new Vector4(), point = new Vector3();
+  const projectCover = coverMesh ? createCoverProjection(coverMesh) : null;
   let gallery, disposed = false, loaded = false, prepared = false, position = 0, visible = false, retraction = 0, previousState = '';
   const report = state => { if (!disposed) onState(state); };
   const bind = (name, index) => {
@@ -94,18 +95,9 @@ export function createCoverMorph({ material, photos, draw, element, onState, sce
     seek(value) { position = value; syncFrame(); },
     project(camera) {
       if (!loaded || !visible || !coverMesh) return;
-      coverMesh.updateWorldMatrix(true, false);
-      coverMesh.skeleton?.update();
-      camera.updateMatrixWorld();
-      let left = Infinity, right = -Infinity, bottom = Infinity, top = -Infinity, far = -Infinity;
-      for (let i = 0; i < coverMesh.geometry.attributes.position.count; i++) {
-        coverMesh.getVertexPosition(i, point).applyMatrix4(coverMesh.matrixWorld).project(camera);
-        left = Math.min(left, point.x); right = Math.max(right, point.x);
-        bottom = Math.min(bottom, point.y); top = Math.max(top, point.y);
-        far = Math.max(far, point.z);
-      }
-      bounds.set(left, bottom, right - left, top - bottom);
-      gallery.project(camera, bounds, far);
+      const { bounds, depth } = projectCover(camera);
+      const left = bounds.x, bottom = bounds.y, right = left + bounds.z, top = bottom + bounds.w;
+      gallery.project(camera, bounds, depth);
       const stage = element.closest?.('.memory-stage');
       stage?.style.setProperty('--photo-drag-x', `${(left + right + 2) * 25}%`);
       stage?.style.setProperty('--photo-drag-y', `calc(${(1 - bottom) * 50}% + 35px)`);
